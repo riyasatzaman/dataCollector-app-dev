@@ -7,6 +7,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.datacollectorx.R;
@@ -58,7 +59,8 @@ public class MainActivity extends AppCompatActivity {
         buttonWithdraw.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                withdrawFromSurvey();
+                showWithdrawConfirmationDialog();
+
             }
         });
 
@@ -80,23 +82,48 @@ public class MainActivity extends AppCompatActivity {
         finish();
     }
 
+    private void showWithdrawConfirmationDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Confirm Withdrawal")
+                .setMessage("Are you sure you want to withdraw? All your data will be deleted, and your earnings will be set to zero.")
+                .setPositiveButton("Yes", (dialog, which) -> {
+                    // User confirmed to withdraw
+                    withdrawFromSurvey();
+                })
+                .setNegativeButton("No", (dialog, which) -> {
+                    // User canceled the dialog
+                    dialog.dismiss();
+                })
+                .create()
+                .show();
+    }
+
     private void withdrawFromSurvey() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null) {
             String uid = currentUser.getUid();
-            // Delete the user document from Firestore
+
+            // Step 1: Delete the user document from Firestore
             db.collection("users").document(uid)
                     .delete()
                     .addOnSuccessListener(aVoid -> {
-                        Toast.makeText(MainActivity.this, "User withdrawn and data deleted", Toast.LENGTH_SHORT).show();
-                        // Sign out the user
-                        signOutUser();
+                        // Step 2: Delete the user from Firebase Authentication
+                        currentUser.delete()
+                                .addOnSuccessListener(aVoid2 -> {
+                                    Toast.makeText(MainActivity.this, "User withdrawn, data deleted, and account removed.", Toast.LENGTH_SHORT).show();
+                                    // Sign out the user
+                                    signOutUser();
+                                })
+                                .addOnFailureListener(e -> {
+                                    Toast.makeText(MainActivity.this, "Failed to delete user: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                });
                     })
                     .addOnFailureListener(e -> {
                         Toast.makeText(MainActivity.this, "Failed to withdraw: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     });
         }
     }
+
 
     private void viewUserProfile() {
         Toast.makeText(MainActivity.this, "Viewing user stats", Toast.LENGTH_SHORT).show();
