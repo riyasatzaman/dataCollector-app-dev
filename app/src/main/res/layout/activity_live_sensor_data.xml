@@ -1,0 +1,190 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal">
+
+        <!-- Wi-Fi Information -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_marginBottom="16dp">
+
+            <!-- Wi-Fi RSSI -->
+            <ImageView
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:src="@drawable/ic_wifi_signal"
+                android:contentDescription="Wi Fi Icon"
+                android:layout_gravity="center" />
+            <TextView
+                android:id="@+id/textViewWifiRssi"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Wi-Fi RSSI"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_gravity="center"
+                android:layout_marginTop="8dp" />
+
+            <!-- Wi-Fi BSSID and Additional Info -->
+            <TextView
+                android:id="@+id/textViewWifiBssid"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="BSSID Info"
+                android:textSize="16sp"
+                android:layout_gravity="center"
+                android:layout_marginTop="4dp" />
+
+            <!-- Wi-Fi Scan Results -->
+            <TextView
+                android:id="@+id/textViewWifiScanResults"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Scan Results"
+                android:textSize="14sp"
+                android:layout_marginTop="8dp"
+                android:padding="8dp"
+                android:background="#f0f0f0"
+                android:scrollbars="vertical"
+                android:maxLines="10"
+                android:gravity="center_horizontal" />
+        </LinearLayout>
+
+        <!-- Sensor Grid -->
+        <GridLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:columnCount="2"
+            android:rowCount="3"
+            android:orientation="horizontal"
+            android:alignmentMode="alignMargins"
+            android:layout_gravity="center">
+
+            <!-- Accelerometer -->
+            <LinearLayout
+                android:layout_width="150dp"
+                android:layout_height="150dp"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_margin="16dp">
+
+                <ImageView
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:src="@drawable/ic_accelerometer"
+                    android:contentDescription="Accelerometer Icon"
+                    android:layout_gravity="center" />
+
+                <TextView
+                    android:id="@+id/textViewAccelerometer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Accelerometer"
+                    android:textSize="16sp"
+                    android:textAlignment="center"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="8dp" />
+            </LinearLayout>
+
+            <!-- Magnetometer -->
+            <LinearLayout
+                android:layout_width="150dp"
+                android:layout_height="150dp"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_margin="16dp">
+
+                <ImageView
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:src="@drawable/ic_magnetometer"
+                    android:contentDescription="Magnetometer Icon"
+                    android:layout_gravity="center" />
+
+                <TextView
+                    android:id="@+id/textViewMagnetometer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Magnetometer"
+                    android:textSize="16sp"
+                    android:textAlignment="center"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="8dp" />
+            </LinearLayout>
+
+            <!-- Gyroscope -->
+            <LinearLayout
+                android:layout_width="150dp"
+                android:layout_height="150dp"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_margin="16dp">
+
+                <ImageView
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:src="@drawable/ic_gyroscope"
+                    android:contentDescription="Gyroscope Icon"
+                    android:layout_gravity="center" />
+
+                <TextView
+                    android:id="@+id/textViewGyroscope"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Gyroscope"
+                    android:textSize="16sp"
+                    android:textAlignment="center"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="8dp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="150dp"
+                android:layout_height="150dp"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginTop="24dp"
+                android:layout_gravity="center_horizontal">
+
+                <ImageView
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:src="@drawable/ic_gps"
+                    android:contentDescription="GPS Icon"
+                    android:layout_gravity="center" />
+
+                <TextView
+                    android:id="@+id/textViewGps"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="GPS"
+                    android:textSize="16sp"
+                    android:textAlignment="center"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="8dp" />
+            </LinearLayout>
+        </GridLayout>
+
+
+
+
+        <!-- Go Back Button -->
+        <Button
+            android:id="@+id/buttonGoBack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Go Back"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="24dp" />
+    </LinearLayout>
+</ScrollView>

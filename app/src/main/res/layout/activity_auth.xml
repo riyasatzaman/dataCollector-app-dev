@@ -11,11 +11,18 @@
         android:layout_centerInParent="true">
 
         <!-- Title -->
+        <ImageView
+            android:id="@+id/appLogo"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            android:layout_centerHorizontal="true"
+            android:layout_alignParentTop="true"
+            android:src="@drawable/app_logo" />
         <TextView
             android:id="@+id/titleTextView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="DataCollectorX"
+            android:text="Data CollectorX"
             android:textSize="24sp"
             android:textStyle="bold"
             android:textColor="@android:color/black"
@@ -40,14 +47,7 @@
             android:layout_marginBottom="24dp" />
 
         <!-- Register Button -->
-        <Button
-            android:id="@+id/buttonRegister"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Register"
-            android:layout_marginBottom="16dp"
-            android:background="@drawable/button_rounded_border"
-            android:textColor="@android:color/black" />
+
 
         <!-- Login Button -->
         <Button
@@ -55,6 +55,15 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Login"
+            android:background="@drawable/button_rounded_border"
+            android:textColor="@android:color/black" />
+
+        <Button
+            android:id="@+id/buttonRegister"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Register"
+            android:layout_margin="18dp"
             android:background="@drawable/button_rounded_border"
             android:textColor="@android:color/black" />
     </LinearLayout>

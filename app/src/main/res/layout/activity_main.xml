@@ -3,20 +3,74 @@
     android:layout_height="match_parent"
     android:padding="16dp">
 
-    <!-- Your existing UI components can go here -->
+    <!-- App Logo -->
+    <ImageView
+        android:id="@+id/appLogo"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentTop="true"
+        android:src="@drawable/app_logo" />
 
-    <!-- TextView to display the UID -->
+    <!-- App Title -->
+    <TextView
+        android:id="@+id/appTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="DataCollectorX"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_below="@id/appLogo"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="8dp"/>
+
+    <!-- Central Button Layout -->
+    <LinearLayout
+        android:id="@+id/centralButtonLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:layout_below="@id/appTitle"
+        android:layout_centerInParent="true"
+        android:layout_marginTop="32dp">
+
+        <!-- Test Device Sensors Button -->
+        <Button
+            android:id="@+id/buttonTestSensors"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Test Device Sensors"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- Begin Scanning and Earn Money Button -->
+        <Button
+            android:id="@+id/buttonBeginScanning"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Begin Scanning and Earn Money" />
+    </LinearLayout>
+
+    <!-- FrameLayout for Fragment -->
+    <FrameLayout
+        android:id="@+id/main_activity_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/bottomNavBar"
+        android:layout_centerInParent="true"
+        android:layout_marginBottom="16dp"
+        android:layout_marginTop="16dp" />
+
+    <!-- Bottom Navigation Bar -->
     <TextView
         android:id="@+id/textViewUid"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="UID: "
         android:textSize="16sp"
-        android:layout_alignParentBottom="true"
+        android:layout_above="@id/bottomNavBar"
         android:layout_centerHorizontal="true"
-        android:layout_marginBottom="100dp" />
-
-    <!-- Bottom Navigation Bar -->
+        android:layout_marginBottom="10dp" />
     <LinearLayout
         android:id="@+id/bottomNavBar"
         android:layout_width="match_parent"
@@ -25,7 +79,7 @@
         android:orientation="horizontal"
         android:gravity="center">
 
-        <!-- Profile View Button -->
+        <!-- My Stats Button -->
         <Button
             android:id="@+id/stats"
             android:layout_width="0dp"
