@@ -102,7 +102,7 @@ public class LiveSensorDataActivity extends AppCompatActivity implements SensorE
             textViewWifiRssi.setText("Wi-Fi RSSI: " + wifiInfo.getRssi() + " dBm");
             textViewWifiBssid.setText("Connected to SSID: " + ssid + ", BSSID: " + wifiInfo.getBSSID());
 
-            // Optionally, you can scan and display all available Wi-Fi networks
+
             List<ScanResult> scanResults = wifiManager.getScanResults();
             StringBuilder scanResultsStringBuilder = new StringBuilder();
             for (ScanResult scanResult : scanResults) {
@@ -113,7 +113,7 @@ public class LiveSensorDataActivity extends AppCompatActivity implements SensorE
                         .append(", Capabilities: ").append(scanResult.capabilities)
                         .append("\n");
             }
-            // Display or use scanResultsStringBuilder as needed
+
         } else {
             textViewWifiRssi.setText("Wi-Fi RSSI: Permission Denied");
             textViewWifiBssid.setText("Wi-Fi BSSID: Permission Denied");
@@ -126,10 +126,10 @@ public class LiveSensorDataActivity extends AppCompatActivity implements SensorE
 
         if (requestCode == 1) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted, proceed with setting up sensors and Wi-Fi info
+                // Permission granted
                 initializeSensorsAndLocation();
             } else {
-                // Permission denied, inform the user and handle gracefully
+                // Permission denied
                 textViewWifiRssi.setText("Wi-Fi RSSI: Permission Denied");
                 textViewGps.setText("GPS: Permission Denied");
             }
@@ -149,7 +149,7 @@ public class LiveSensorDataActivity extends AppCompatActivity implements SensorE
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
-        // Implement if needed
+
     }
 
     @Override
@@ -163,17 +163,17 @@ public class LiveSensorDataActivity extends AppCompatActivity implements SensorE
 
     @Override
     public void onProviderEnabled(String provider) {
-        // Implement if needed
+
     }
 
     @Override
     public void onProviderDisabled(String provider) {
-        // Implement if needed
+
     }
 
     @Override
     public void onStatusChanged(String provider, int status, Bundle extras) {
-        // Implement if needed
+
     }
 
     @Override
