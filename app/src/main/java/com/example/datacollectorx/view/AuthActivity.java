@@ -1,12 +1,16 @@
 package com.example.datacollectorx.view;
 
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.location.LocationManager;
 import android.os.Bundle;
-import android.view.View;
+import android.provider.Settings;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
@@ -41,10 +45,8 @@ public class AuthActivity extends AppCompatActivity {
             public void onChanged(FirebaseUser firebaseUser) {
                 if (firebaseUser != null) {
                     Toast.makeText(AuthActivity.this, "Welcome, " + firebaseUser.getEmail(), Toast.LENGTH_SHORT).show();
-                    // Navigate to MainActivity
-                    Intent intent = new Intent(AuthActivity.this, MainActivity.class);
-                    startActivity(intent);
-                    finish();
+                    // Check if location services are enabled
+                    checkLocationServices();
                 }
             }
         });
@@ -59,19 +61,8 @@ public class AuthActivity extends AppCompatActivity {
         });
 
         // Set up button click listeners
-        buttonRegister.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                signUpUser();
-            }
-        });
-
-        buttonLogin.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                loginUser();
-            }
-        });
+        buttonRegister.setOnClickListener(view -> signUpUser());
+        buttonLogin.setOnClickListener(view -> loginUser());
     }
 
     private void signUpUser() {
@@ -96,5 +87,48 @@ public class AuthActivity extends AppCompatActivity {
         }
 
         authViewModel.signIn(email, password);
+    }
+
+    private void checkLocationServices() {
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        boolean isLocationEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+
+        if (!isLocationEnabled) {
+            showLocationServicesDialog();
+        } else {
+            // Proceed to the next activity if location is enabled
+            navigateToMainActivity();
+        }
+    }
+
+    private void showLocationServicesDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Location Services Required")
+                .setMessage("This app requires location services to be enabled. Please enable location services.")
+                .setPositiveButton("Enable", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        // Redirect the user to the location settings
+                        Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                        startActivity(intent);
+                    }
+                })
+                .setNegativeButton("Exit", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        // Show toast and close the app
+                        Toast.makeText(AuthActivity.this, "App cannot function without location services.", Toast.LENGTH_LONG).show();
+                        finish();
+                    }
+                })
+                .setCancelable(false)
+                .show();
+    }
+
+    private void navigateToMainActivity() {
+        Intent intent = new Intent(AuthActivity.this, MainActivity.class);
+        startActivity(intent);
+        finish();
     }
 }

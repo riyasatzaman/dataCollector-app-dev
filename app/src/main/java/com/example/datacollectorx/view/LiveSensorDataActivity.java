@@ -17,6 +17,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -27,11 +28,12 @@ import java.util.List;
 
 public class LiveSensorDataActivity extends AppCompatActivity implements SensorEventListener, LocationListener {
 
-    private TextView textViewWifiRssi, textViewWifiBssid, textViewAccelerometer, textViewMagnetometer, textViewGyroscope, textViewGps;
+    private TextView textViewWifiRssi, textViewWifiBssid, textViewAccelerometer, textViewMagnetometer, textViewGyroscope, textViewGps, textViewWifiScanResults;
     private SensorManager sensorManager;
     private Sensor accelerometer, magnetometer, gyroscope;
     private LocationManager locationManager;
     private WifiManager wifiManager;
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,13 +43,13 @@ public class LiveSensorDataActivity extends AppCompatActivity implements SensorE
         // Bind UI elements
         textViewWifiRssi = findViewById(R.id.textViewWifiRssi);
         textViewWifiBssid = findViewById(R.id.textViewWifiBssid);
+        textViewWifiScanResults = findViewById(R.id.textViewWifiScanResults);
         textViewAccelerometer = findViewById(R.id.textViewAccelerometer);
         textViewMagnetometer = findViewById(R.id.textViewMagnetometer);
         textViewGyroscope = findViewById(R.id.textViewGyroscope);
         textViewGps = findViewById(R.id.textViewGps);
         Button buttonGoBack = findViewById(R.id.buttonGoBack);
 
-        // Set click listener for the Go Back button
         buttonGoBack.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -55,23 +57,46 @@ public class LiveSensorDataActivity extends AppCompatActivity implements SensorE
             }
         });
 
-        // Request necessary permissions
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        // Initialize location manager and sensor manager
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 
-            // Request the permissions
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
-                    1);
-        } else {
-            // Permissions are already granted, proceed with setting up the sensors and Wi-Fi info
+        // Check for location permissions
+        if (checkLocationPermission()) {
             initializeSensorsAndLocation();
         }
     }
 
+    private boolean checkLocationPermission() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+
+            // Request the missing permissions
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
+                    LOCATION_PERMISSION_REQUEST_CODE);
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission granted, initialize sensors and location
+                initializeSensorsAndLocation();
+            } else {
+                // Permission denied, show a message and close the activity
+                Toast.makeText(this, "Location permission is required for this app to function.", Toast.LENGTH_LONG).show();
+                finish();
+            }
+        }
+    }
+
     private void initializeSensorsAndLocation() {
-        // Initialize sensor manager and sensors
-        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        // Initialize sensors
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
@@ -81,9 +106,9 @@ public class LiveSensorDataActivity extends AppCompatActivity implements SensorE
         sensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_NORMAL);
         sensorManager.registerListener(this, gyroscope, SensorManager.SENSOR_DELAY_NORMAL);
 
-        // Initialize location manager
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        // Request location updates
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, this);
         }
 
@@ -93,7 +118,7 @@ public class LiveSensorDataActivity extends AppCompatActivity implements SensorE
     }
 
     private void updateWifiInfo() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        if (wifiManager.isWifiEnabled()) {
             WifiInfo wifiInfo = wifiManager.getConnectionInfo();
             String ssid = wifiInfo.getSSID();
             if (ssid.equals("<unknown ssid>")) {
@@ -102,7 +127,10 @@ public class LiveSensorDataActivity extends AppCompatActivity implements SensorE
             textViewWifiRssi.setText("Wi-Fi RSSI: " + wifiInfo.getRssi() + " dBm");
             textViewWifiBssid.setText("Connected to SSID: " + ssid + ", BSSID: " + wifiInfo.getBSSID());
 
-
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                // Return if permissions are not granted
+                return;
+            }
             List<ScanResult> scanResults = wifiManager.getScanResults();
             StringBuilder scanResultsStringBuilder = new StringBuilder();
             for (ScanResult scanResult : scanResults) {
@@ -113,26 +141,12 @@ public class LiveSensorDataActivity extends AppCompatActivity implements SensorE
                         .append(", Capabilities: ").append(scanResult.capabilities)
                         .append("\n");
             }
+            textViewWifiScanResults.setText(scanResultsStringBuilder.toString());
 
         } else {
-            textViewWifiRssi.setText("Wi-Fi RSSI: Permission Denied");
-            textViewWifiBssid.setText("Wi-Fi BSSID: Permission Denied");
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        if (requestCode == 1) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted
-                initializeSensorsAndLocation();
-            } else {
-                // Permission denied
-                textViewWifiRssi.setText("Wi-Fi RSSI: Permission Denied");
-                textViewGps.setText("GPS: Permission Denied");
-            }
+            textViewWifiRssi.setText("Wi-Fi is disabled.");
+            textViewWifiBssid.setText("Wi-Fi is disabled.");
+            textViewWifiScanResults.setText("");
         }
     }
 
@@ -149,7 +163,7 @@ public class LiveSensorDataActivity extends AppCompatActivity implements SensorE
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
-
+        // Implement if needed
     }
 
     @Override
@@ -179,13 +193,16 @@ public class LiveSensorDataActivity extends AppCompatActivity implements SensorE
     @Override
     protected void onResume() {
         super.onResume();
-        sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
-        sensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_NORMAL);
-        sensorManager.registerListener(this, gyroscope, SensorManager.SENSOR_DELAY_NORMAL);
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, this);
+        if (checkLocationPermission()) {
+            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+            sensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_NORMAL);
+            sensorManager.registerListener(this, gyroscope, SensorManager.SENSOR_DELAY_NORMAL);
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                    ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, this);
+            }
+            updateWifiInfo();
         }
-        updateWifiInfo();
     }
 
     @Override
