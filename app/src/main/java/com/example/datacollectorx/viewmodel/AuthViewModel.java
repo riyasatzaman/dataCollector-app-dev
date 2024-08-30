@@ -65,6 +65,7 @@ public class AuthViewModel extends ViewModel {
         Map<String, Object> userData = new HashMap<>();
         userData.put("roomsScanned", 0);
         userData.put("earnings", 0.0);
+        userData.put("hasAgreedToTerms", false);
 
         db.collection("users").document(uid)
                 .set(userData)

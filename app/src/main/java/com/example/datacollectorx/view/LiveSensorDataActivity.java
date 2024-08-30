@@ -50,6 +50,7 @@ public class LiveSensorDataActivity extends AppCompatActivity implements SensorE
         textViewGps = findViewById(R.id.textViewGps);
         Button buttonGoBack = findViewById(R.id.buttonGoBack);
 
+
         buttonGoBack.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -92,6 +93,7 @@ public class LiveSensorDataActivity extends AppCompatActivity implements SensorE
                 Toast.makeText(this, "Location permission is required for this app to function.", Toast.LENGTH_LONG).show();
                 finish();
             }
+
         }
     }
 
