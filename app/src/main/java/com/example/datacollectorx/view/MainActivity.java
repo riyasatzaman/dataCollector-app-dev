@@ -72,7 +72,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 // Handle Begin Scanning and Earn Money
-                Toast.makeText(MainActivity.this, "Begin Scanning and Earn Money clicked", Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(MainActivity.this, BuildingSelectionActivity.class);
+                startActivity(intent);
             }
         });
 

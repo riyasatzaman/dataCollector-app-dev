@@ -4,8 +4,6 @@
 
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-
-
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -21,6 +19,9 @@
         android:theme="@style/Theme.DataCollectorX"
         tools:targetApi="31">
         <activity
+            android:name=".view.BuildingSelectionActivity"
+            android:exported="false" />
+        <activity
             android:name=".view.LiveSensorDataActivity"
             android:exported="false" />
         <activity
@@ -34,7 +35,7 @@
         </activity>
         <activity
             android:name=".view.MainActivity"
-            android:exported="false"></activity>
+            android:exported="false" />
     </application>
 
 </manifest>
