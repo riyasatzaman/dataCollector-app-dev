@@ -2,13 +2,10 @@ package com.example.datacollectorx.view;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
-import android.widget.Button;
-import android.widget.Toast;
-
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.example.datacollectorx.R;
 import com.example.datacollectorx.util.BuildingAdapter;
 
@@ -19,29 +16,27 @@ public class BuildingSelectionActivity extends AppCompatActivity {
 
     private RecyclerView recyclerView;
     private List<Integer> buildingImages;
-    private List<String> buildingLabels;  // New list for labels
-    private Button buttonBack;
+    private List<String> buildingLabels;
+    private List<String> buildingCodes;  // List to hold building codes
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_building_selection);
 
-
-
         recyclerView = findViewById(R.id.recyclerViewBuildings);
         recyclerView.setLayoutManager(new GridLayoutManager(this, 2)); // 2 columns
 
         // Initialize building images (use your drawable resource IDs)
         buildingImages = new ArrayList<>();
-        buildingImages.add(R.drawable.athabasca);
-        buildingImages.add(R.drawable.assinioba);
-        buildingImages.add(R.drawable.cab);
-        buildingImages.add(R.drawable.sab);
-        buildingImages.add(R.drawable.pembina);
-        buildingImages.add(R.drawable.csc);
-        buildingImages.add(R.drawable.sub);
-        buildingImages.add(R.drawable.ccis);
+        buildingImages.add(R.drawable.athabasca);   // ATH
+        buildingImages.add(R.drawable.assinioba);   // ASB
+        buildingImages.add(R.drawable.cab);         // CAB
+        buildingImages.add(R.drawable.sab);         // SAB
+        buildingImages.add(R.drawable.pembina);     // PEMB
+        buildingImages.add(R.drawable.csc);         // CSC
+        buildingImages.add(R.drawable.sub);         // SUB
+        buildingImages.add(R.drawable.ccis);        // CCIS
 
         // Initialize building labels
         buildingLabels = new ArrayList<>();
@@ -54,22 +49,25 @@ public class BuildingSelectionActivity extends AppCompatActivity {
         buildingLabels.add("Student Union Building (SUB)");
         buildingLabels.add("CCIS");
 
+        // Initialize building codes
+        buildingCodes = new ArrayList<>();
+        buildingCodes.add("ATH");
+        buildingCodes.add("ASH");
+        buildingCodes.add("CAB");
+        buildingCodes.add("SAB");
+        buildingCodes.add("PBH");
+        buildingCodes.add("CSC");
+        buildingCodes.add("SUB");
+        buildingCodes.add("CCIS");
 
-        buttonBack = findViewById(R.id.buttonGoBack_building_selection);
-        buttonBack.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                finish(); // Close the activity and go back
-            }
-        });
-        // Set up the adapter and pass the image list and label list
+        // Set up the adapter and pass the image list, label list, and building codes
         BuildingAdapter adapter = new BuildingAdapter(buildingImages, buildingLabels, new BuildingAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(int position) {
-                // Handle grid item click (redirect to another activity, pass building position, etc.)
-                Toast.makeText(BuildingSelectionActivity.this, "Building " + (position + 1) + " clicked", Toast.LENGTH_SHORT).show();
-
-
+                // Pass the building code to RoomSelectionActivity
+                Intent intent = new Intent(BuildingSelectionActivity.this, RoomSelectionActivity.class);
+                intent.putExtra("building_code", buildingCodes.get(position));  // Pass the building code (e.g., "ATH")
+                startActivity(intent);
             }
         });
 
