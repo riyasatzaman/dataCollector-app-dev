@@ -46,5 +46,7 @@ dependencies {
     implementation 'com.google.firebase:firebase-analytics'
     implementation libs.cardview
     implementation 'com.google.code.gson:gson:2.8.8'
+    implementation 'com.google.mlkit:text-recognition:16.0.0'
+
 
 }

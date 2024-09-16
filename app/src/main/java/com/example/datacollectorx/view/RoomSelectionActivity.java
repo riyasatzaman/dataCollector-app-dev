@@ -53,8 +53,11 @@ public class RoomSelectionActivity extends AppCompatActivity {
         roomAdapter = new RoomAdapter(roomList, new RoomAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(String room) {
-                // Handle room click, redirect to sensor collection activity
-                Toast.makeText(RoomSelectionActivity.this, "Selected room: " + room, Toast.LENGTH_SHORT).show();
+                // Handle room click, redirect to RoomOCRActivity
+                Intent intent = new Intent(RoomSelectionActivity.this, RoomOCRActivity.class);
+                intent.putExtra("room", room);  // Pass the room name to the OCR activity
+                Toast.makeText(RoomSelectionActivity.this, "Please take a picture of the room label to verify" + room, Toast.LENGTH_LONG).show();
+                startActivity(intent);
             }
         });
 

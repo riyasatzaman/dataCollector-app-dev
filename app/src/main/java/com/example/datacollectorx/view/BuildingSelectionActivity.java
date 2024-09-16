@@ -41,10 +41,10 @@ public class BuildingSelectionActivity extends AppCompatActivity {
         // Initialize building labels
         buildingLabels = new ArrayList<>();
         buildingLabels.add("Athabasca Hall (ATH)");
-        buildingLabels.add("Assiniobia Hall (ASB)");
+        buildingLabels.add("Assiniobia Hall (ASH)");
         buildingLabels.add("Central Academic Building (CAB)");
         buildingLabels.add("South Academic Building (SAB)");
-        buildingLabels.add("Pembina Hall (PEMB)");
+        buildingLabels.add("Pembina Hall (PBH)");
         buildingLabels.add("Computing Science Center (CSC)");
         buildingLabels.add("Student Union Building (SUB)");
         buildingLabels.add("CCIS");
