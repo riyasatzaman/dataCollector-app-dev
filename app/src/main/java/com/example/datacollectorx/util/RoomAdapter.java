@@ -1,11 +1,14 @@
 package com.example.datacollectorx.util;
 
-import android.widget.Filter;
-import android.widget.Filterable;
+import android.content.Context;
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Filter;
+import android.widget.Filterable;
 import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -14,34 +17,35 @@ import com.example.datacollectorx.R;
 import java.util.ArrayList;
 import java.util.List;
 
-public class RoomAdapter extends RecyclerView.Adapter<RoomAdapter.ViewHolder> implements Filterable {
+public class RoomAdapter extends RecyclerView.Adapter<RoomAdapter.RoomViewHolder> implements Filterable {
 
-    private List<String> roomList;           // Original list of rooms
-    private List<String> filteredRoomList;   // Filtered list of rooms
+    private List<String> roomList;
+    private List<String> filteredRoomList;
+    private List<String> scannedRooms;
     private OnItemClickListener listener;
 
     public interface OnItemClickListener {
         void onItemClick(String room);
     }
 
-    public RoomAdapter(List<String> roomList, OnItemClickListener listener) {
+    public RoomAdapter(List<String> roomList, List<String> scannedRooms, OnItemClickListener listener) {
         this.roomList = roomList;
-        this.filteredRoomList = new ArrayList<>(roomList);  // Initialize with the full list
+        this.filteredRoomList = new ArrayList<>(roomList);  // Initialize filtered list with all rooms
+        this.scannedRooms = scannedRooms;
         this.listener = listener;
     }
 
     @NonNull
     @Override
-    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public RoomViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_room, parent, false);
-        return new ViewHolder(view);
+        return new RoomViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull RoomViewHolder holder, int position) {
         String room = filteredRoomList.get(position);
-        holder.textViewRoom.setText(room);
-        holder.itemView.setOnClickListener(v -> listener.onItemClick(room));
+        holder.bind(room, scannedRooms.contains(room));  // Check if the room is already scanned
     }
 
     @Override
@@ -49,43 +53,62 @@ public class RoomAdapter extends RecyclerView.Adapter<RoomAdapter.ViewHolder> im
         return filteredRoomList.size();
     }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView textViewRoom;
-
-        public ViewHolder(@NonNull View itemView) {
-            super(itemView);
-            textViewRoom = itemView.findViewById(R.id.textViewRoom);
-        }
-    }
-
     @Override
     public Filter getFilter() {
         return new Filter() {
             @Override
-            protected FilterResults performFiltering(CharSequence charSequence) {
-                List<String> filteredList = new ArrayList<>();
-                if (charSequence == null || charSequence.length() == 0) {
-                    filteredList.addAll(roomList);  // Show all rooms when search is empty
+            protected FilterResults performFiltering(CharSequence constraint) {
+                List<String> filteredResults = new ArrayList<>();
+                if (constraint == null || constraint.length() == 0) {
+                    filteredResults.addAll(roomList);  // No filter applied, show all rooms
                 } else {
-                    String filterPattern = charSequence.toString().toLowerCase().trim();
+                    String query = constraint.toString().toLowerCase().trim();
                     for (String room : roomList) {
-                        if (room.toLowerCase().contains(filterPattern)) {
-                            filteredList.add(room);
+                        if (room.toLowerCase().contains(query)) {
+                            filteredResults.add(room);
                         }
                     }
                 }
-
                 FilterResults results = new FilterResults();
-                results.values = filteredList;
+                results.values = filteredResults;
                 return results;
             }
 
             @Override
-            protected void publishResults(CharSequence charSequence, FilterResults filterResults) {
+            protected void publishResults(CharSequence constraint, FilterResults results) {
                 filteredRoomList.clear();
-                filteredRoomList.addAll((List) filterResults.values);
-                notifyDataSetChanged();  // Refresh the list
+                filteredRoomList.addAll((List<String>) results.values);
+                notifyDataSetChanged();
             }
         };
+    }
+
+    public class RoomViewHolder extends RecyclerView.ViewHolder {
+        private TextView textViewRoom;
+
+        public RoomViewHolder(@NonNull View itemView) {
+            super(itemView);
+            textViewRoom = itemView.findViewById(R.id.textViewRoom);
+
+            itemView.setOnClickListener(v -> {
+                int position = getAdapterPosition();
+                if (position != RecyclerView.NO_POSITION) {
+                    listener.onItemClick(filteredRoomList.get(position));
+                }
+            });
+        }
+
+        public void bind(String room, boolean isScanned) {
+            textViewRoom.setText(room);
+            if (isScanned) {
+                // Set background color to green if the room has been scanned
+                textViewRoom.setBackgroundColor(Color.parseColor("#4CAF50"));
+                textViewRoom.setTextColor(Color.WHITE);  // Set text color to white for better visibility
+            } else {
+                // Set background color to default
+                textViewRoom.setBackgroundColor(Color.WHITE);
+                textViewRoom.setTextColor(Color.BLACK);  // Set text color to black
+            }
+        }
     }
 }

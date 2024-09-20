@@ -9,22 +9,27 @@ import androidx.lifecycle.ViewModel;
 import com.example.datacollectorx.repository.AuthRepository;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class AuthViewModel extends ViewModel {
     private AuthRepository authRepository;
     private MutableLiveData<FirebaseUser> userLiveData;
     private MutableLiveData<String> authErrorLiveData;
+    private MutableLiveData<Map<String, List<String>>> scannedRoomsLiveData;
     private FirebaseFirestore db;
 
     public AuthViewModel() {
         authRepository = new AuthRepository();
         userLiveData = new MutableLiveData<>();
         authErrorLiveData = new MutableLiveData<>();
-        db = FirebaseFirestore.getInstance();  // Initialize Firestore instance
+        scannedRoomsLiveData = new MutableLiveData<>(new HashMap<>());  // Initialize empty map
+        db = FirebaseFirestore.getInstance();
     }
 
     public LiveData<FirebaseUser> getUserLiveData() {
@@ -35,51 +40,99 @@ public class AuthViewModel extends ViewModel {
         return authErrorLiveData;
     }
 
+    public LiveData<Map<String, List<String>>> getScannedRoomsLiveData() {
+        return scannedRoomsLiveData;
+    }
+
+    // Sign in the user and fetch scanned rooms
     public void signIn(String email, String password) {
         authRepository.signIn(email, password, task -> {
             if (task.isSuccessful()) {
-                userLiveData.setValue(authRepository.getCurrentUser());
-                authErrorLiveData.setValue(null);  // Clear error messages on success
+                FirebaseUser user = authRepository.getCurrentUser();
+                userLiveData.setValue(user);
+                authErrorLiveData.setValue(null);
+                fetchUserScannedRooms(user);  // Fetch scanned rooms on login
             } else {
                 handleFirebaseAuthException(task.getException());
             }
         });
     }
 
+    // Sign up the user, initialize Firestore data, and fetch scanned rooms
     public void signUp(String email, String password) {
         authRepository.signUp(email, password, task -> {
             if (task.isSuccessful()) {
                 FirebaseUser user = authRepository.getCurrentUser();
                 userLiveData.setValue(user);
                 authErrorLiveData.setValue(null);
-                createUserInFirestore(user);  // Initialize user data in Firestore after registration
+                initializeUserInFirestore(user);  // Initialize new user data in Firestore
             } else {
                 handleFirebaseAuthException(task.getException());
             }
         });
     }
 
-    private void createUserInFirestore(FirebaseUser firebaseUser) {
-        String uid = firebaseUser.getUid();
-
-        Map<String, Object> userData = new HashMap<>();
-        userData.put("roomsScanned", 0);
-        userData.put("earnings", 0.0);
-        userData.put("hasAgreedToTerms", false);
-
-        db.collection("users").document(uid)
-                .set(userData)
-                .addOnSuccessListener(aVoid -> {
-                    // Log success
-                    Log.d("Firestore", "User data successfully initialized for UID: " + uid);
+    // Fetch scanned rooms from Firestore
+    public void fetchUserScannedRooms(FirebaseUser user) {
+        String uid = user.getUid();
+        db.collection("users").document(uid).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        Map<String, List<String>> scannedRooms = (Map<String, List<String>>) documentSnapshot.get("scannedRooms");
+                        if (scannedRooms == null) {
+                            scannedRooms = new HashMap<>();  // If null, initialize empty map
+                        }
+                        scannedRoomsLiveData.setValue(scannedRooms);  // Set LiveData
+                    }
                 })
                 .addOnFailureListener(e -> {
-                    // Log the error
-                    Log.e("Firestore", "Failed to initialize user data: " + e.getMessage());
-                    authErrorLiveData.setValue("Failed to initialize user data: " + e.getMessage());
+                    Log.e("Firestore", "Error fetching user data: " + e.getMessage());
                 });
     }
 
+    // Add a scanned room to Firestore
+    public void addScannedRoom(FirebaseUser user, String buildingCode, String roomCode) {
+        String uid = user.getUid();
+
+        db.collection("users").document(uid).get().addOnSuccessListener(documentSnapshot -> {
+            if (documentSnapshot.exists()) {
+                Map<String, List<String>> scannedRooms = (Map<String, List<String>>) documentSnapshot.get("scannedRooms");
+                if (scannedRooms == null) {
+                    scannedRooms = new HashMap<>();
+                }
+
+                // Update the list for the specific building
+                List<String> roomsInBuilding = scannedRooms.get(buildingCode);
+                if (roomsInBuilding != null && !roomsInBuilding.contains(roomCode)) {
+                    roomsInBuilding.add(roomCode);
+                } else {
+                    // If no rooms scanned yet for this building, create a new list
+                    roomsInBuilding = new ArrayList<>();
+                    roomsInBuilding.add(roomCode);
+                    scannedRooms.put(buildingCode, roomsInBuilding);
+                }
+
+                // Update Firestore with the new scanned rooms
+                db.collection("users").document(uid)
+                        .update("scannedRooms", scannedRooms)
+                        .addOnSuccessListener(aVoid -> Log.d("Firestore", "Room added successfully."))
+                        .addOnFailureListener(e -> Log.e("Firestore", "Error adding room: " + e.getMessage()));
+            }
+        });
+    }
+
+    private void initializeUserInFirestore(FirebaseUser firebaseUser) {
+        String uid = firebaseUser.getUid();
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("scannedRooms", new HashMap<String, List<String>>());  // Initialize empty map for scanned rooms
+        userData.put("hasAgreedToTerms", false);
+        userData.put("earnings", 0.0);
+
+        db.collection("users").document(uid)
+                .set(userData)
+                .addOnSuccessListener(aVoid -> Log.d("Firestore", "User data initialized successfully"))
+                .addOnFailureListener(e -> Log.e("Firestore", "Failed to initialize user data: " + e.getMessage()));
+    }
 
     private void handleFirebaseAuthException(Exception exception) {
         if (exception instanceof FirebaseAuthException) {
@@ -98,14 +151,14 @@ public class AuthViewModel extends ViewModel {
                     authErrorLiveData.setValue("This email address is already in use.");
                     break;
                 case "ERROR_WEAK_PASSWORD":
-                    authErrorLiveData.setValue("The password is too weak. Please use a stronger password.");
+                    authErrorLiveData.setValue("The password is too weak.");
                     break;
                 default:
-                    authErrorLiveData.setValue("Authentication failed, Wrong email or password. Please try again.");
+                    authErrorLiveData.setValue("Authentication failed. Please try again.");
                     break;
             }
         } else {
-            authErrorLiveData.setValue("An unexpected error occurred. Please try again.");
+            authErrorLiveData.setValue("An unexpected error occurred.");
         }
     }
 

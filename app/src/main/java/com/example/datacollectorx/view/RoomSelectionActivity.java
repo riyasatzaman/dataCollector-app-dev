@@ -15,6 +15,9 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.datacollectorx.R;
 import com.example.datacollectorx.util.RoomAdapter;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -30,54 +33,67 @@ public class RoomSelectionActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
     private RoomAdapter roomAdapter;
     private EditText searchEditText;
-    private List<String> roomList;
+    private List<String> roomList;  // List of all rooms in the building
+    private List<String> scannedRooms = new ArrayList<>();  // List of scanned rooms for the building
+
+    private FirebaseFirestore db;
+    private FirebaseAuth mAuth;
+    private String buildingCode;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_room_selection);
+
+        db = FirebaseFirestore.getInstance();
+        mAuth = FirebaseAuth.getInstance();
+
         Button buttonBack = findViewById(R.id.buttonBack);
         buttonBack.setOnClickListener(v -> {
             finish();
         });
 
-
         recyclerView = findViewById(R.id.recyclerViewRooms);
         searchEditText = findViewById(R.id.searchEditText);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        String buildingCode = getIntent().getStringExtra("building_code");  // Get the building code
+        buildingCode = getIntent().getStringExtra("building_code");  // Get the building code
 
         roomList = getRoomsForBuilding(buildingCode);  // Parse and load room data from JSON
 
-        roomAdapter = new RoomAdapter(roomList, new RoomAdapter.OnItemClickListener() {
-            @Override
-            public void onItemClick(String room) {
-                // Handle room click, redirect to RoomOCRActivity
-                Intent intent = new Intent(RoomSelectionActivity.this, RoomOCRActivity.class);
-                intent.putExtra("room", room);  // Pass the room name to the OCR activity
-                Toast.makeText(RoomSelectionActivity.this, "Please take a picture of the room label to verify" + room, Toast.LENGTH_LONG).show();
-                startActivity(intent);
-            }
-        });
-
-        recyclerView.setAdapter(roomAdapter);
-
-        // Implement search functionality
-        searchEditText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                roomAdapter.getFilter().filter(s);  // Filter the room list as the user types
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) { }
-        });
+        // Fetch the user's scanned rooms from Firestore for this building
+        fetchScannedRoomsForBuilding(buildingCode);
     }
 
+    private void setupRecyclerView(List<String> scannedRooms) {
+        // Initialize the adapter with the room list and the scanned rooms
+        roomAdapter = new RoomAdapter(roomList, scannedRooms, new RoomAdapter.OnItemClickListener() {
+            @Override
+            public void onItemClick(String room) {
+                if (!scannedRooms.contains(room)) {
+                    // Redirect to OCR activity only if the room has not been scanned
+                    Intent intent = new Intent(RoomSelectionActivity.this, RoomRecordActivity.class);
+                    intent.putExtra("building_code", buildingCode);  // Pass the building code
+                    intent.putExtra("room", room);  // Pass the room name
+                    startActivity(intent);
+
+                } else {
+                    // If the room is already scanned, notify the user
+                    Toast.makeText(RoomSelectionActivity.this, "Room already scanned: " + room, Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+
+        // Set up the RecyclerView with the adapter
+        recyclerView.setAdapter(roomAdapter);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Fetch the scanned rooms again when returning to the activity
+        fetchScannedRoomsForBuilding(buildingCode);
+    }
     // Load rooms from the JSON file based on the building code
     private List<String> getRoomsForBuilding(String buildingCode) {
         List<String> rooms = new ArrayList<>();
@@ -107,4 +123,33 @@ public class RoomSelectionActivity extends AppCompatActivity {
 
         return rooms;  // Return the list of rooms for the selected building
     }
+
+    // Fetch scanned rooms from Firestore for the selected building
+    private void fetchScannedRoomsForBuilding(String buildingCode) {
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        DocumentReference userDocRef = db.collection("users").document(userId);
+
+        userDocRef.get().addOnSuccessListener(documentSnapshot -> {
+            if (documentSnapshot.exists()) {
+                // Fetch scanned rooms as a Map
+                Map<String, Boolean> scannedRoomsMap = (Map<String, Boolean>) documentSnapshot.get("scannedRooms." + buildingCode);
+
+                if (scannedRoomsMap != null) {
+                    // Convert map keys (room names) into a List of scanned rooms
+                    List<String> scannedRooms = new ArrayList<>(scannedRoomsMap.keySet());
+
+                    // Now, pass this scannedRooms list to your adapter or any other logic
+                    setupRecyclerView(scannedRooms);
+                } else {
+                    // If there are no scanned rooms for this building
+                    setupRecyclerView(new ArrayList<>()); // Pass an empty list
+                }
+            }
+        }).addOnFailureListener(e -> {
+            Toast.makeText(RoomSelectionActivity.this, "Error fetching scanned rooms: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        });
+    }
+
 }

@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.datacollectorx.R;
 import com.example.datacollectorx.util.BuildingAdapter;
+import com.example.datacollectorx.view.RoomSelectionActivity;
 
 import java.util.ArrayList;
 import java.util.List;

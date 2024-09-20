@@ -37,6 +37,10 @@
         <activity
             android:name=".view.RoomOCRActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".view.RoomRecordActivity"
+            android:exported="false" />
         <activity
             android:name=".view.AuthActivity"
             android:exported="true">

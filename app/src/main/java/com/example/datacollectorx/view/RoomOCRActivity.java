@@ -30,6 +30,9 @@ public class RoomOCRActivity extends AppCompatActivity {
     private String roomName;
     private ImageView imageView;
     private Bitmap imageBitmap;
+    private String buildingCode;  // Declare the building code
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,6 +44,7 @@ public class RoomOCRActivity extends AppCompatActivity {
         Button validateButton = findViewById(R.id.buttonValidate);
 
         roomName = getIntent().getStringExtra("room");
+        buildingCode = getIntent().getStringExtra("building_code");
 
         // Capture image from camera
         captureButton.setOnClickListener(v -> {
@@ -105,7 +109,11 @@ public class RoomOCRActivity extends AppCompatActivity {
 
         String recognizedString = recognizedText.toString().toLowerCase().trim();
         if (recognizedString.contains(roomName.toLowerCase().trim())) {
-            Toast.makeText(this, "Room label matches!", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(RoomOCRActivity.this, RoomRecordActivity.class);
+            intent.putExtra("building_code", buildingCode);  // Pass the building code
+            intent.putExtra("room", roomName);  // Pass the room name
+            startActivity(intent);
+
         } else {
             Toast.makeText(this, "Room label does not match!", Toast.LENGTH_SHORT).show();
         }
