@@ -9,32 +9,47 @@
     app:cardBackgroundColor="@android:color/white"
     app:cardUseCompatPadding="true">
 
-    <!-- Layout inside the CardView -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:gravity="center">
+        android:padding="8dp">
 
-        <!-- Building Image -->
+        <!-- Existing ImageView and TextView for building card -->
         <ImageView
-            android:id="@+id/imageViewBuilding"
-            android:layout_width="120dp"
+            android:id="@+id/buildingImage"
+            android:layout_width="match_parent"
             android:layout_height="120dp"
-            android:scaleType="centerCrop"
-            android:contentDescription="Building Image"
-            android:padding="2dp" />
+            android:scaleType="centerCrop" />
 
-        <!-- Building Label -->
         <TextView
-            android:id="@+id/textViewBuildingLabel"
+            android:id="@+id/buildingLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Building"
+            android:text="Building Name"
             android:textSize="16sp"
-            android:textColor="@android:color/black"
-            android:gravity="center"
-            android:layout_marginTop="8dp" />
+            android:layout_gravity="center_horizontal"
+            android:padding="8dp" />
+
+        <!-- Add a ProgressBar for the completion percentage -->
+        <ProgressBar
+            android:id="@+id/buildingProgressBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:progressDrawable="@drawable/progress_bar_custom"
+            android:layout_marginTop="8dp"/>
+
+        <TextView
+            android:id="@+id/buildingPercentage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:text="0%"
+            android:padding="8dp" />
+
     </LinearLayout>
+
 
 </androidx.cardview.widget.CardView>
