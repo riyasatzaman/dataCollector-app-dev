@@ -63,6 +63,20 @@ public class RoomSelectionActivity extends AppCompatActivity {
 
         // Fetch the user's scanned rooms from Firestore for this building
         fetchScannedRoomsForBuilding(buildingCode);
+
+        // Add the search functionality
+        searchEditText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                roomAdapter.getFilter().filter(charSequence);  // Call the filter method in the adapter
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {}
+        });
     }
 
     private void setupRecyclerView(List<String> scannedRooms) {
@@ -72,7 +86,7 @@ public class RoomSelectionActivity extends AppCompatActivity {
             public void onItemClick(String room) {
                 if (!scannedRooms.contains(room)) {
                     // Redirect to OCR activity only if the room has not been scanned
-                    Intent intent = new Intent(RoomSelectionActivity.this, RoomRecordActivity.class);
+                    Intent intent = new Intent(RoomSelectionActivity.this, RoomOCRActivity.class);
                     intent.putExtra("building_code", buildingCode);  // Pass the building code
                     intent.putExtra("room", room);  // Pass the room name
                     startActivity(intent);
@@ -94,6 +108,7 @@ public class RoomSelectionActivity extends AppCompatActivity {
         // Fetch the scanned rooms again when returning to the activity
         fetchScannedRoomsForBuilding(buildingCode);
     }
+
     // Load rooms from the JSON file based on the building code
     private List<String> getRoomsForBuilding(String buildingCode) {
         List<String> rooms = new ArrayList<>();

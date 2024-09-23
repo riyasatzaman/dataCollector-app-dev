@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Toast;
@@ -112,6 +113,7 @@ public class RoomOCRActivity extends AppCompatActivity {
             Intent intent = new Intent(RoomOCRActivity.this, RoomRecordActivity.class);
             intent.putExtra("building_code", buildingCode);  // Pass the building code
             intent.putExtra("room", roomName);  // Pass the room name
+            Log.d("RoomOCRActivity", "Building code: " + buildingCode);
             startActivity(intent);
 
         } else {

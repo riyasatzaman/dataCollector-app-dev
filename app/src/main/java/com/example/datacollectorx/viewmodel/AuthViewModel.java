@@ -127,6 +127,7 @@ public class AuthViewModel extends ViewModel {
         userData.put("scannedRooms", new HashMap<String, List<String>>());  // Initialize empty map for scanned rooms
         userData.put("hasAgreedToTerms", false);
         userData.put("earnings", 0.0);
+        userData.put("roomsScanned", 0);
 
         db.collection("users").document(uid)
                 .set(userData)
