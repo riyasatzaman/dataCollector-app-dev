@@ -26,7 +26,7 @@ import com.example.datacollectorx.R;
 
 import java.util.List;
 
-public class LiveSensorDataActivity extends AppCompatActivity implements SensorEventListener, LocationListener {
+public class LiveSensorDataActivity extends BaseActivity implements SensorEventListener, LocationListener {
 
     private TextView textViewWifiRssi, textViewWifiBssid, textViewAccelerometer, textViewMagnetometer, textViewGyroscope, textViewGps, textViewWifiScanResults;
     private SensorManager sensorManager;

@@ -28,7 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class RoomSelectionActivity extends AppCompatActivity {
+public class RoomSelectionActivity extends BaseActivity {
 
     private RecyclerView recyclerView;
     private RoomAdapter roomAdapter;

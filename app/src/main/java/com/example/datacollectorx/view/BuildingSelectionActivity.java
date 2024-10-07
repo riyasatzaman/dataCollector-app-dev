@@ -24,7 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class BuildingSelectionActivity extends AppCompatActivity {
+public class BuildingSelectionActivity extends BaseActivity {
 
     private RecyclerView recyclerView;
     private List<Integer> buildingImages;

@@ -25,7 +25,7 @@ import com.example.datacollectorx.viewmodel.AuthViewModel;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-public class AuthActivity extends AppCompatActivity {
+public class AuthActivity extends BaseActivity {
 
     private AuthViewModel authViewModel;
     private EditText editTextEmail, editTextPassword;

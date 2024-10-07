@@ -32,7 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class RoomRecordActivity extends AppCompatActivity implements SensorEventListener, LocationListener {
+public class RoomRecordActivity extends BaseActivity implements SensorEventListener, LocationListener {
 
     private ProgressBar circularProgressBar;
     private Button buttonHoldToRecord;
