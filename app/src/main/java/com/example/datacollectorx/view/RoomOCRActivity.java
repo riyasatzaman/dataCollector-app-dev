@@ -32,13 +32,19 @@ public class RoomOCRActivity extends AppCompatActivity {
     private ImageView imageView;
     private Bitmap imageBitmap;
     private String buildingCode;  // Declare the building code
-
+    private Button goBack;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_room_ocr);
+        goBack = findViewById(R.id.buttonGoBack_room_ocr);
+
+
+        goBack.setOnClickListener(v -> {
+            finish();
+        });
 
         imageView = findViewById(R.id.imageViewRoomLabel);
         Button captureButton = findViewById(R.id.buttonCapture);

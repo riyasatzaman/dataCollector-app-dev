@@ -2,6 +2,8 @@ package com.example.datacollectorx.view;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.widget.Button;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -28,6 +30,7 @@ public class BuildingSelectionActivity extends AppCompatActivity {
     private List<Integer> buildingImages;
     private List<String> buildingLabels;
     private List<String> buildingCodes;  // List to hold building codes
+    private Button buttonBack;
 
 
     private Map<String, List<String>> loadRoomDataFromJson() {
@@ -122,6 +125,11 @@ public class BuildingSelectionActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_building_selection);
 
+        // Bind UI elements
+        buttonBack = findViewById(R.id.buttonGoBack_building_selection);
+        buttonBack.setOnClickListener(v -> {
+            finish();
+        });
         recyclerView = findViewById(R.id.recyclerViewBuildings);
         recyclerView.setLayoutManager(new GridLayoutManager(this, 2)); // 2 columns
 

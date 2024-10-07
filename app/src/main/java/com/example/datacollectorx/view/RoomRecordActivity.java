@@ -45,6 +45,7 @@ public class RoomRecordActivity extends AppCompatActivity implements SensorEvent
     private boolean isHolding = false;
     private boolean shouldRecord = false;
     private boolean isRoomAlreadyScanned = false;
+    private Button buttonGoBack;
 
     private SensorManager sensorManager;
     private Sensor accelerometer, magnetometer, gyroscope;
@@ -58,6 +59,11 @@ public class RoomRecordActivity extends AppCompatActivity implements SensorEvent
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_room_record);
+
+        buttonGoBack = findViewById(R.id.buttonGoBack_room_record);
+        buttonGoBack.setOnClickListener(v -> {
+            finish();
+        });
 
         // Initialize Firebase instances
         db = FirebaseFirestore.getInstance();
