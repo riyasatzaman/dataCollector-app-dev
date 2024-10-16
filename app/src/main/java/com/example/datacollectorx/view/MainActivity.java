@@ -1,14 +1,19 @@
 package com.example.datacollectorx.view;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -20,6 +25,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 public class MainActivity extends BaseActivity {
 
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 101;
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private TextView textViewUid;
@@ -28,14 +34,10 @@ public class MainActivity extends BaseActivity {
     private Button buttonShowStats;
     private Button buttonTestSensors;
     private Button buttonBeginScanning;
-
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-
 
         // Initialize Firebase Auth and Firestore
         mAuth = FirebaseAuth.getInstance();
@@ -57,13 +59,16 @@ public class MainActivity extends BaseActivity {
             textViewUid.setText("UID: " + uid);
         }
 
-
+        // Set click listener for "Test Sensors" button
         buttonTestSensors.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Redirect to LiveSensorDataActivity
-                Intent intent = new Intent(MainActivity.this, LiveSensorDataActivity.class);
-                startActivity(intent);
+                // Check location permission before proceeding
+                if (checkLocationPermission()) {
+                    // If permission is granted, proceed to LiveSensorDataActivity
+                    Intent intent = new Intent(MainActivity.this, LiveSensorDataActivity.class);
+                    startActivity(intent);
+                }
             }
         });
 
@@ -71,9 +76,12 @@ public class MainActivity extends BaseActivity {
         buttonBeginScanning.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // Handle Begin Scanning and Earn Money
-                Intent intent = new Intent(MainActivity.this, BuildingSelectionActivity.class);
-                startActivity(intent);
+                // Check location permission before proceeding
+                if (checkLocationPermission()) {
+                    // If permission is granted, proceed to BuildingSelectionActivity
+                    Intent intent = new Intent(MainActivity.this, BuildingSelectionActivity.class);
+                    startActivity(intent);
+                }
             }
         });
 
@@ -90,7 +98,6 @@ public class MainActivity extends BaseActivity {
             @Override
             public void onClick(View v) {
                 showWithdrawConfirmationDialog();
-
             }
         });
 
@@ -98,9 +105,38 @@ public class MainActivity extends BaseActivity {
         buttonShowStats.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-               toggleFragment();
+                toggleFragment();
             }
         });
+    }
+
+    // Method to check and request location permission
+    private boolean checkLocationPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            // Request permission
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    LOCATION_PERMISSION_REQUEST_CODE);
+            return false;
+        }
+        // Permission is already granted
+        return true;
+    }
+
+    // Handle the result of the permission request
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission was granted, proceed with the last clicked action if necessary
+                Toast.makeText(MainActivity.this, "Location permission granted.", Toast.LENGTH_SHORT).show();
+            } else {
+                // Permission was denied, show a toast message
+                Toast.makeText(MainActivity.this, "You need to give location permission for the app to work.", Toast.LENGTH_LONG).show();
+            }
+        }
     }
 
     private void signOutUser() {
@@ -154,20 +190,6 @@ public class MainActivity extends BaseActivity {
         }
     }
 
-
-    private void loadFragment(Fragment fragment) {
-        FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-        transaction.replace(R.id.main_activity_container, fragment);
-        transaction.addToBackStack(null);
-        transaction.commit();
-    }
-
-    private void removeFragment(Fragment fragment) {
-        FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-        transaction.remove(fragment);
-        transaction.commit();
-    }
-
     private void toggleFragment() {
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction transaction = fragmentManager.beginTransaction();
@@ -188,6 +210,4 @@ public class MainActivity extends BaseActivity {
         // Commit the transaction
         transaction.commit();
     }
-
-
 }

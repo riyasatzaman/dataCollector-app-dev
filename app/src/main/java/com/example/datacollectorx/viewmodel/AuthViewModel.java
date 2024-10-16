@@ -123,17 +123,33 @@ public class AuthViewModel extends ViewModel {
 
     private void initializeUserInFirestore(FirebaseUser firebaseUser) {
         String uid = firebaseUser.getUid();
+
+        // Initialize the recordedBuildings map with building codes set to false
+        Map<String, Boolean> recordedBuildings = new HashMap<>();
+        recordedBuildings.put("ATH", false);
+        recordedBuildings.put("ASH", false);
+        recordedBuildings.put("CAB", false);
+        recordedBuildings.put("SAB", false);
+        recordedBuildings.put("PBH", false);
+        recordedBuildings.put("CSC", false);
+        recordedBuildings.put("SUB", false);
+        recordedBuildings.put("CCIS", false);
+
+        // Other user data to be initialized
         Map<String, Object> userData = new HashMap<>();
         userData.put("scannedRooms", new HashMap<String, List<String>>());  // Initialize empty map for scanned rooms
-        userData.put("hasAgreedToTerms", false);
-        userData.put("earnings", 0.0);
-        userData.put("roomsScanned", 0);
+        userData.put("hasAgreedToTerms", false);  // Default value for terms
+        userData.put("earnings", 0.0);  // Initialize earnings
+        userData.put("roomsScanned", 0);  // Initialize rooms scanned count
+        userData.put("recordedBuildings", recordedBuildings);  // Initialize recorded buildings
 
+        // Store user data in Firestore
         db.collection("users").document(uid)
                 .set(userData)
                 .addOnSuccessListener(aVoid -> Log.d("Firestore", "User data initialized successfully"))
                 .addOnFailureListener(e -> Log.e("Firestore", "Failed to initialize user data: " + e.getMessage()));
     }
+
 
     private void handleFirebaseAuthException(Exception exception) {
         if (exception instanceof FirebaseAuthException) {

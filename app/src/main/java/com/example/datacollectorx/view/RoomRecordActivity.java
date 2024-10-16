@@ -2,6 +2,7 @@ package com.example.datacollectorx.view;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -25,6 +26,7 @@ import androidx.core.app.ActivityCompat;
 import com.example.datacollectorx.R;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
@@ -116,6 +118,7 @@ public class RoomRecordActivity extends BaseActivity implements SensorEventListe
             case "ATH":  // Athabasca Hall
                 totalEarnings = 20;
                 totalRooms = 248;
+
                 break;
             case "CSC":  // Computing Science Center
                 totalEarnings = 15;
@@ -148,13 +151,14 @@ public class RoomRecordActivity extends BaseActivity implements SensorEventListe
             default:
                 break;
         }
-        return totalEarnings;
+        return totalEarnings/totalRooms;
     }
 
     private void recordScannedRoom(String buildingCode, String room) {
         if (shouldRecord) {
             String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
             DocumentReference userDocRef = db.collection("users").document(userId);
+            DocumentReference adminDocRef = db.collection("admin").document("cQMK4loeC3SVPdaBzKDi");  // Use specific admin document ID
 
             // Fetch user data from Firestore to update roomsScanned and earnings
             userDocRef.get().addOnSuccessListener(documentSnapshot -> {
@@ -163,10 +167,14 @@ public class RoomRecordActivity extends BaseActivity implements SensorEventListe
                     Map<String, Map<String, Boolean>> scannedRooms = (Map<String, Map<String, Boolean>>) documentSnapshot.get("scannedRooms");
                     Double currentEarnings = documentSnapshot.getDouble("earnings");
                     Long roomsScanned = documentSnapshot.getLong("roomsScanned");
+                    Map<String, Boolean> recordedBuildings = (Map<String, Boolean>) documentSnapshot.get("recordedBuildings");
 
-                    // Initialize scannedRooms if null
+                    // Initialize scannedRooms and recordedBuildings if null
                     if (scannedRooms == null) {
                         scannedRooms = new HashMap<>();
+                    }
+                    if (recordedBuildings == null) {
+                        recordedBuildings = new HashMap<>();
                     }
 
                     // Check if the building exists in the map
@@ -191,10 +199,22 @@ public class RoomRecordActivity extends BaseActivity implements SensorEventListe
                     updates.put("earnings", updatedEarnings);  // Update the earnings
                     updates.put("roomsScanned", updatedRoomsScanned);  // Update the rooms scanned count
 
-                    // Update Firestore document with the scanned room and earnings
+                    // Check if it's the user's first time scanning a room in this building
+                    if (!recordedBuildings.containsKey(buildingCode) || !recordedBuildings.get(buildingCode)) {
+                        recordedBuildings.put(buildingCode, true);  // Mark the building as recorded
+                        updates.put("recordedBuildings", recordedBuildings);
+
+                        // Increment the global building count for the first-time recording of this building
+                        adminDocRef.update("buildings." + buildingCode, FieldValue.increment(1));
+                    }
+
+                    // Update the user's Firestore document
                     userDocRef.update(updates)
                             .addOnSuccessListener(aVoid -> {
+                                // Now update the global stats in the admin collection
+                                updateGlobalStats(earningsPerRoom);
                                 Toast.makeText(RoomRecordActivity.this, "Room recorded successfully!", Toast.LENGTH_SHORT).show();
+                                goBackTwice();
                             })
                             .addOnFailureListener(e -> {
                                 Toast.makeText(RoomRecordActivity.this, "Error recording room: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -205,6 +225,25 @@ public class RoomRecordActivity extends BaseActivity implements SensorEventListe
             });
         }
     }
+
+    // Function to update global stats in the "admin" collection
+    private void updateGlobalStats(double earningsPerRoom) {
+        DocumentReference adminDocRef = db.collection("admin").document("cQMK4loeC3SVPdaBzKDi");  // Use the specific admin document ID
+
+        // Increment the global earnings and rooms scanned
+        adminDocRef.update("totalMoney", FieldValue.increment(earningsPerRoom));
+        adminDocRef.update("totalRooms", FieldValue.increment(1));
+    }
+
+
+    private void goBackTwice() {
+        Intent intent = new Intent(RoomRecordActivity.this, BuildingSelectionActivity.class);  // Go back to BuildingSelectionActivity
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        finish();  // Ensure the current activity is finished
+    }
+
+
 
 
     private void startRecording() {

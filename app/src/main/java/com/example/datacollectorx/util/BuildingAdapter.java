@@ -6,11 +6,14 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.example.datacollectorx.R;
-import com.google.firebase.firestore.FirebaseFirestore;
+
 import java.util.List;
 import java.util.Map;
 
@@ -18,24 +21,27 @@ public class BuildingAdapter extends RecyclerView.Adapter<BuildingAdapter.ViewHo
 
     private List<Integer> buildingImages;
     private List<String> buildingLabels;
-    private List<String> buildingCodes;  // e.g., "ATH", "CAB", etc.
-    private Map<String, List<String>> roomDataMap;  // Rooms loaded from JSON (assets)
+    private List<String> buildingCodes;
+    private Map<String, List<String>> roomDataMap;  // Rooms loaded from JSON
     private Map<String, Map<String, Boolean>> scannedRoomsMap;  // Scanned rooms from Firestore
+    private Map<String, Long> buildingsMap;  // Map from admin collection (building -> user count)
     private OnItemClickListener listener;
-    private FirebaseFirestore db;
+    private static final int MAX_USERS_PER_BUILDING = 10;  // Maximum number of users per building
 
     public interface OnItemClickListener {
         void onItemClick(int position);
     }
 
-    public BuildingAdapter(List<Integer> buildingImages, List<String> buildingLabels, List<String> buildingCodes, Map<String, List<String>> roomDataMap, Map<String, Map<String, Boolean>> scannedRoomsMap, OnItemClickListener listener) {
+    public BuildingAdapter(List<Integer> buildingImages, List<String> buildingLabels, List<String> buildingCodes,
+                           Map<String, List<String>> roomDataMap, Map<String, Map<String, Boolean>> scannedRoomsMap,
+                           Map<String, Long> buildingsMap, OnItemClickListener listener) {
         this.buildingImages = buildingImages;
         this.buildingLabels = buildingLabels;
         this.buildingCodes = buildingCodes;
-        this.roomDataMap = roomDataMap;  // Room data loaded from JSON
-        this.scannedRoomsMap = scannedRoomsMap;  // Scanned room data from Firestore
+        this.roomDataMap = roomDataMap;
+        this.scannedRoomsMap = scannedRoomsMap;
+        this.buildingsMap = buildingsMap;  // Data from admin (building -> user count)
         this.listener = listener;
-        this.db = FirebaseFirestore.getInstance();  // Initialize Firestore
     }
 
     @NonNull
@@ -66,17 +72,44 @@ public class BuildingAdapter extends RecyclerView.Adapter<BuildingAdapter.ViewHo
         holder.buildingProgressBar.setProgress(progress);
         holder.textViewPercentage.setText(progress + "%");
 
-        // Change progress bar color based on the progress value
+        // Fetch user count for the building
+        if (buildingsMap.containsKey(buildingCode)) {
+            Object buildingCountObject = buildingsMap.get(buildingCode);
 
+            // Handle the case where the object is a string and needs to be converted to a Long
+            long buildingCount;
+            if (buildingCountObject instanceof String) {
+                try {
+                    buildingCount = Long.parseLong((String) buildingCountObject);
+                } catch (NumberFormatException e) {
+                    buildingCount = 0; // Handle parsing failure gracefully
+                }
+            } else if (buildingCountObject instanceof Long) {
+                buildingCount = (Long) buildingCountObject;
+            } else {
+                buildingCount = 0; // Default to 0 if type is unexpected
+            }
+
+            // Check if the building limit is reached
+            if (buildingCount >= 10) {
+                // Set the view to disabled or gray out the building selection
+
+
+                holder.itemView.setAlpha(0.5f);  // Make the item look disabled visually
+            } else {
+                // Set the view to enabled
+                holder.itemView.setEnabled(true);
+                holder.itemView.setAlpha(1.0f);  // Reset opacity
+            }
+        }
 
         // Set onClick listener
         holder.itemView.setOnClickListener(v -> {
-            if (listener != null) {
+            if (listener != null && holder.itemView.isEnabled()) {
                 listener.onItemClick(position);  // Pass building index
             }
         });
     }
-
 
 
     @Override

@@ -3,14 +3,14 @@ package com.example.datacollectorx.view;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
+import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.datacollectorx.R;
 import com.example.datacollectorx.util.BuildingAdapter;
-import com.example.datacollectorx.view.RoomSelectionActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.gson.Gson;
@@ -32,7 +32,7 @@ public class BuildingSelectionActivity extends BaseActivity {
     private List<String> buildingCodes;  // List to hold building codes
     private Button buttonBack;
 
-
+    // Load room data from the JSON file
     private Map<String, List<String>> loadRoomDataFromJson() {
         Map<String, List<String>> roomDataMap = new HashMap<>();
         try {
@@ -57,6 +57,7 @@ public class BuildingSelectionActivity extends BaseActivity {
         return roomDataMap;
     }
 
+    // Fetch user's scanned rooms from Firestore
     private void fetchScannedRoomsFromFirestore(String userId, FirestoreCallback firestoreCallback) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         db.collection("users").document(userId)
@@ -79,43 +80,111 @@ public class BuildingSelectionActivity extends BaseActivity {
                 });
     }
 
+    // Fetch global buildings user count from the admin collection
+    private void fetchBuildingsMapFromAdmin(FirestoreCallback firestoreCallback) {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        db.collection("admin").document("cQMK4loeC3SVPdaBzKDi")
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        // Retrieve the buildings map (building code -> count of users)
+                        Map<String, Long> buildingsMap = (Map<String, Long>) documentSnapshot.get("buildings");
+
+                        if (buildingsMap == null) {
+                            buildingsMap = new HashMap<>();
+                        }
+
+                        firestoreCallback.onBuildingsMapCallback(buildingsMap);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    e.printStackTrace();
+                    firestoreCallback.onBuildingsMapCallback(new HashMap<>());  // Return an empty map on failure
+                });
+    }
+
     // Callback interface to handle Firestore response
     private interface FirestoreCallback {
         void onCallback(Map<String, Map<String, Boolean>> scannedRoomsMap);
+
+        void onBuildingsMapCallback(Map<String, Long> buildingsMap);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
 
-        // Step 1: Load roomDataMap from JSON again
+        // Step 1: Load roomDataMap from JSON
         Map<String, List<String>> roomDataMap = loadRoomDataFromJson();
 
-        // Step 2: Fetch scannedRoomsMap from Firestore again
+        // Step 2: Fetch scannedRoomsMap from Firestore
         String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         fetchScannedRoomsFromFirestore(userId, new FirestoreCallback() {
             @Override
             public void onCallback(Map<String, Map<String, Boolean>> scannedRoomsMap) {
-                // Step 3: Reinitialize the adapter to refresh the data
-                BuildingAdapter adapter = new BuildingAdapter(
-                        buildingImages,
-                        buildingLabels,
-                        buildingCodes,
-                        roomDataMap,
-                        scannedRoomsMap,
-                        new BuildingAdapter.OnItemClickListener() {
-                            @Override
-                            public void onItemClick(int position) {
-                                // Pass the building code to RoomSelectionActivity
-                                Intent intent = new Intent(BuildingSelectionActivity.this, RoomSelectionActivity.class);
-                                intent.putExtra("building_code", buildingCodes.get(position));
-                                startActivity(intent);
-                            }
-                        }
-                );
+                // Step 3: Fetch the buildingsMap from the admin collection (user count per building)
+                fetchBuildingsMapFromAdmin(new FirestoreCallback() {
+                    @Override
+                    public void onBuildingsMapCallback(Map<String, Long> buildingsMap) {
+                        // Step 4: Initialize the adapter with the scannedRoomsMap and buildingsMap
+                        BuildingAdapter adapter = new BuildingAdapter(
+                                buildingImages,
+                                buildingLabels,
+                                buildingCodes,
+                                roomDataMap,
+                                scannedRoomsMap,
+                                buildingsMap,  // Pass the buildings map (global user count per building)
+                                new BuildingAdapter.OnItemClickListener() {
+                                    @Override
+                                    public void onItemClick(int position) {
+                                        String buildingCode = buildingCodes.get(position);
 
-                // Step 4: Set the new adapter to the RecyclerView
-                recyclerView.setAdapter(adapter);
+                                        // Check if the building reached the limit of 10 users
+                                        if (buildingsMap.containsKey(buildingCode)) {
+                                            Object value = buildingsMap.get(buildingCode);
+
+                                            // Safely cast to Long
+                                            long buildingCount;
+                                            if (value instanceof Long) {
+                                                buildingCount = (Long) value;
+                                            } else if (value instanceof String) {
+                                                try {
+                                                    buildingCount = Long.parseLong((String) value);  // Try to convert String to Long
+                                                } catch (NumberFormatException e) {
+                                                    buildingCount = 0;  // Default to 0 in case of an error
+                                                }
+                                            } else {
+                                                buildingCount = 0;  // Default if it's neither Long nor String
+                                            }
+
+                                            if (buildingCount >= 10) {
+                                                // Show modal or toast message
+                                                showBuildingLimitReached(buildingLabels.get(position));
+                                            } else {
+                                                // Pass the building code to RoomSelectionActivity
+                                                Intent intent = new Intent(BuildingSelectionActivity.this, RoomSelectionActivity.class);
+                                                intent.putExtra("building_code", buildingCodes.get(position));
+                                                startActivity(intent);
+                                            }
+                                        }
+                                    }
+                                }
+                        );
+
+                        // Step 5: Set the adapter to the RecyclerView
+                        recyclerView.setAdapter(adapter);
+                    }
+
+                    @Override
+                    public void onCallback(Map<String, Map<String, Boolean>> scannedRoomsMap) {
+                        // This method isn't used here, but is required for the interface
+                    }
+                });
+            }
+
+            @Override
+            public void onBuildingsMapCallback(Map<String, Long> buildingsMap) {
+                // Not used here
             }
         });
     }
@@ -165,35 +234,17 @@ public class BuildingSelectionActivity extends BaseActivity {
         buildingCodes.add("CSC");
         buildingCodes.add("SUB");
         buildingCodes.add("CCIS");
+    }
 
+    // Show a modal or toast when building limit is reached
+    private void showBuildingLimitReached(String buildingLabel) {
 
-        Map<String, List<String>> roomDataMap = loadRoomDataFromJson();
-
-        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        fetchScannedRoomsFromFirestore(userId, new FirestoreCallback() {
-            @Override
-            public void onCallback(Map<String, Map<String, Boolean>> scannedRoomsMap) {
-                // Initialize the adapter after loading both maps
-                BuildingAdapter adapter = new BuildingAdapter(
-                        buildingImages,
-                        buildingLabels,
-                        buildingCodes,
-                        roomDataMap,
-                        scannedRoomsMap,
-                        new BuildingAdapter.OnItemClickListener() {
-                            @Override
-                            public void onItemClick(int position) {
-                                // Pass the building code to RoomSelectionActivity
-                                Intent intent = new Intent(BuildingSelectionActivity.this, RoomSelectionActivity.class);
-                                intent.putExtra("building_code", buildingCodes.get(position));
-                                startActivity(intent);
-                            }
-                        }
-                );
-
-                // Set the adapter to the RecyclerView
-                recyclerView.setAdapter(adapter);
-            }
-        });
+    new AlertDialog.Builder(this)
+            .setTitle("Building Limit Reached")
+            .setMessage("The building " + buildingLabel + " has reached the maximum number of users, please select another building, or check back soon!")
+            .setPositiveButton("OK", (dialog, which) -> {
+                // Do nothing
+            })
+            .show();
     }
 }
