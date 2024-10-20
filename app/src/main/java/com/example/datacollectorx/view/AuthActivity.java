@@ -173,7 +173,7 @@ public class AuthActivity extends BaseActivity {
 
         // Set up the terms text with a scrollable view
         final TextView termsTextView = new TextView(this);
-        termsTextView.setText("title of the study: \tSensor Data Collection for Campus Map Building\n" +
+        termsTextView.setText("Title of the study: \tSensor Data Collection for Campus Map Building\n" +
                 "\n" +
                 "Principal Investigator(s) (Supervisor(s)):\tMo Adel Abdelghany\n" +
                 "\t\t\t\t\t\tMSc. Student \n" +
@@ -206,16 +206,16 @@ public class AuthActivity extends BaseActivity {
                 "\n" +
                 "Compensation: Participants will receive a gift card for their involvement in this research. Each participant will be paid according to the specific building they are assigned to, with amounts ranging from $15 to $40 per building. Participants working on the study will receive different amounts based on the following table:\n" +
                 "\n" +
-                "\n" +
-                "Athabasca Hall\t20$\t for 30 Minutes\n" +
-                "Computing Science Center\t15$ \t for 20 Minutes\n" +
-                "Assiniboia Hall\t20$\t for 30 Minutes\n" +
-                "Pembina Hall\t20$ \t for 30 Minutes\n" +
-                "South Academic Building (SAB)\t30$\t for 40 Minutes\n" +
-                "Student Union Building (SUB)\t20$ \tfor 30 Minutes\n" +
-                "Central Academic Building (CAB)\t20$\t for 30 Minutes\n" +
-                "CCIS\t40$\t for one hour\n" + "all times are approximate\n" +
-                "\n" +
+                "Building\tQuota (dollars)\tExpected Completion  Time\n" +
+                "Athabasca Hall\t20$\t30 Minutes\n" +
+                "Computing Science Center\t15$\t20 Minutes\n" +
+                "Assiniboia Hall\t20$\t30 Minutes\n" +
+                "Pembina Hall\t20$\t30 Minutes\n" +
+                "South Academic Building (SAB)\t30$\t40 Minutes\n" +
+                "Student Union Building (SUB)\t20$\t30 Minutes\n" +
+                "Central Academic Building (CAB)\t20$\t30 Minutes\n" +
+                "CCIS\t40$\tOne hour\n" +
+                "\n" + "all times are approximate' \n" +
                 "Voluntary Participation: You are under no obligation to participate. And if you do, an amount of money will be recorded to your account and is shown in the application for every room scanned, this amount is calculated based on the number of rooms divided over each building’s full price as shown in the table, Should you choose to withdraw midway through the data collection process simply close and uninstall the application and no further responses for the survey will be collected. Given the real time nature of the survey, once you have submitted a data log, it will no longer be possible to withdraw that record from the study. Participants may withdraw from the survey at any time, however, data submitted up to this point will be used.\n" +
                 "The implication of a participant's withdrawal is that they will no longer collect data and they will only receive a partial reward for the data they have contributed to date.\n" +
                 "\n" +
@@ -227,15 +227,15 @@ public class AuthActivity extends BaseActivity {
                 "\n" +
                 "Please keep this form for your records.\n" +
                 "\n" +
-
-                "UofA ethics board approval no. Pro00143170 "+
-                "Checking “I agree” button on this form means you’re a 18 years old or above, and your consent to it. ");
+                "Checking “I agree” button on this form means you’re a18 years old or above, and your consent to it. \n");
         termsTextView.setPadding(16, 16, 16, 16);
         termsTextView.setMovementMethod(new ScrollingMovementMethod()); // Allows scrolling
 
-        // Wrap the TextView in a ScrollView
+        // Create ScrollView for the terms text with a limited height
         ScrollView scrollView = new ScrollView(this);
         scrollView.addView(termsTextView);
+        scrollView.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 600)); // Set max height to avoid hiding checkbox
 
         // Set up the checkbox
         final CheckBox checkBox = new CheckBox(this);
@@ -245,39 +245,49 @@ public class AuthActivity extends BaseActivity {
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(16, 16, 16, 16);
+
+        // Add ScrollView and CheckBox to the layout
         layout.addView(scrollView); // Add scrollable terms
         layout.addView(checkBox);   // Add checkbox for agreement
 
         builder.setView(layout);
 
-        // Set up the buttons
-        builder.setPositiveButton("Agree", (dialog, which) -> {
-            if (checkBox.isChecked()) {
-                // Update Firestore to indicate agreement
-                db.collection("users").document(firebaseUser.getUid())
-                        .update("hasAgreedToTerms", true)
-                        .addOnSuccessListener(aVoid -> {
-                            checkDeviceCompatibility(); // Proceed to the next step
-                        })
-                        .addOnFailureListener(e -> {
-                            // Handle failure to update user data
-                            Toast.makeText(AuthActivity.this, "Error saving agreement: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                        });
-            } else {
-                Toast.makeText(this, "You must agree to the terms to use this app.", Toast.LENGTH_SHORT).show();
-                showTermsAndConditionsDialog(firebaseUser); // Show the dialog again if not agreed
-            }
-        });
-
+        // Manually create the dialog, don't close on positive button click unless checkbox is checked
+        builder.setPositiveButton("Agree", null); // Set listener manually later
         builder.setNegativeButton("Cancel", (dialog, which) -> {
-            // Exit the app if the user does not agree
-            finish();
+            finish(); // Close the app if the user does not agree
         });
 
-        // Make sure the dialog can't be dismissed without a decision
-        builder.setCancelable(false);
-        builder.show();
+        AlertDialog dialog = builder.create();
+        dialog.setCancelable(false);
+
+        // Set OnClickListener for the Agree button
+        dialog.setOnShowListener(dialogInterface -> {
+            Button agreeButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            agreeButton.setOnClickListener(v -> {
+                if (checkBox.isChecked()) {
+                    // Update Firestore to indicate agreement
+                    db.collection("users").document(firebaseUser.getUid())
+                            .update("hasAgreedToTerms", true)
+                            .addOnSuccessListener(aVoid -> {
+                                dialog.dismiss(); // Close dialog after success
+                                checkDeviceCompatibility(); // Proceed to the next step
+                            })
+                            .addOnFailureListener(e -> {
+                                // Handle failure to update user data
+                                Toast.makeText(AuthActivity.this, "Error saving agreement: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            });
+                } else {
+                    // If the checkbox is not checked, show a warning
+                    Toast.makeText(this, "You must agree to the terms to use this app.", Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
+
+        dialog.show();
     }
+
+
 
 
     private void checkDeviceCompatibility() {
