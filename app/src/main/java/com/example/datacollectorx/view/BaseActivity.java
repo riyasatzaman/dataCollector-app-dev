@@ -1,15 +1,21 @@
 package com.example.datacollectorx.view;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 public class BaseActivity extends AppCompatActivity {
+    private static final int REQUEST_NOTIFICATION_PERMISSION = 100;  // Define the constant here
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -20,6 +26,8 @@ public class BaseActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         checkWiFiAndLocationStatus();
+        requestNotificationPermissionIfNeeded();
+
     }
 
     // Method to check if Wi-Fi and location are enabled
@@ -65,4 +73,43 @@ public class BaseActivity extends AppCompatActivity {
                 })
                 .show();
     }
+
+    private void requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+
+                // Request notification permission
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                        REQUEST_NOTIFICATION_PERMISSION);
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == REQUEST_NOTIFICATION_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission granted for notifications
+                // You can handle this case as needed
+            } else {
+                // Permission denied
+                // You can show a message to the user or handle this accordingly
+                new AlertDialog.Builder(this)
+                        .setTitle("Notification Permission Required")
+                        .setMessage("Please allow notification permissions to receive important updates.")
+                        .setPositiveButton("Grant Permission", (dialog, which) -> {
+                            requestNotificationPermissionIfNeeded();
+                        })
+                        .setNegativeButton("Cancel", (dialog, which) -> {
+                            dialog.dismiss();
+                        })
+                        .show();
+            }
+        }
+    }
+
 }

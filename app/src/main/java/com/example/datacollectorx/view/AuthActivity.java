@@ -9,6 +9,7 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.method.ScrollingMovementMethod;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -26,6 +27,7 @@ import com.example.datacollectorx.R;
 import com.example.datacollectorx.viewmodel.AuthViewModel;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.messaging.FirebaseMessaging;
 
 public class AuthActivity extends BaseActivity {
 
@@ -96,7 +98,19 @@ public class AuthActivity extends BaseActivity {
 
         // Proceed with the signup process
         authViewModel.signUp(email, password);
+
+        // Retrieve the FCM token and store it
+        FirebaseMessaging.getInstance().getToken().addOnCompleteListener(task -> {
+            if (!task.isSuccessful()) {
+                Log.w("FCM", "Fetching FCM registration token failed", task.getException());
+                return;
+            }
+
+
+
+        });
     }
+
 
 
     private void loginUser() {

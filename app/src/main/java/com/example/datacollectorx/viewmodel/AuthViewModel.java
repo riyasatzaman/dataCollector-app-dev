@@ -7,10 +7,13 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
 import com.example.datacollectorx.repository.AuthRepository;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
+import com.google.firebase.messaging.FirebaseMessaging;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -65,7 +68,19 @@ public class AuthViewModel extends ViewModel {
                 FirebaseUser user = authRepository.getCurrentUser();
                 userLiveData.setValue(user);
                 authErrorLiveData.setValue(null);
-                initializeUserInFirestore(user);  // Initialize new user data in Firestore
+                initializeUserInFirestore(user);
+                FirebaseMessaging.getInstance().getToken().addOnCompleteListener(fcmTask -> {
+                    if (!fcmTask.isSuccessful()) {
+                        Log.w("FCM", "Fetching FCM registration token failed", fcmTask.getException());
+                        return;
+                    }
+
+                    // Get the FCM token and store it in Firestore
+                    String fcmToken = fcmTask.getResult();
+                    storeFcmToken(fcmToken);  // Store the token using a method that updates the Firestore user document
+                });
+
+                // Initialize new user data in Firestore
             } else {
                 handleFirebaseAuthException(task.getException());
             }
@@ -120,6 +135,28 @@ public class AuthViewModel extends ViewModel {
             }
         });
     }
+
+
+
+    public void storeFcmToken(String fcmToken) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null) {
+            String uid = user.getUid();
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+            // Prepare the FCM token update
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("fcmToken", fcmToken);
+
+            // Update the Firestore document with the FCM token
+            db.collection("users").document(uid)
+                    .update(updates)  // Use update to modify only the fcmToken field
+                    .addOnSuccessListener(aVoid -> Log.d("Firestore", "FCM token updated successfully"))
+                    .addOnFailureListener(e -> Log.e("Firestore", "Error updating FCM token: " + e.getMessage()));
+        }
+    }
+
+
 
     private void initializeUserInFirestore(FirebaseUser firebaseUser) {
         String uid = firebaseUser.getUid();
