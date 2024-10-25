@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="200dp"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+    android:id="@+id/notification_title"
+    style="@style/TextAppearance.Compat.Notification.Title"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="Large notification title" />
+
+    <TextView
+    android:id="@+id/notification_body"
+    style="@style/TextAppearance.Compat.Notification.Line2"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_weight="1"
+    android:maxLines="4" android:ellipsize="end" android:text="This is the expanded notification body with a fixed height. If the text is too long, it will be truncated." />
+</LinearLayout>

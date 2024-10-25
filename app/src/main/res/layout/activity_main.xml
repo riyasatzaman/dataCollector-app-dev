@@ -40,7 +40,7 @@
             android:id="@+id/buttonTestSensors"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Test Device Sensors"
+            android:text="See the data you are sending"
             android:layout_marginBottom="16dp"/>
 
         <!-- Begin Scanning and Earn Money Button -->
