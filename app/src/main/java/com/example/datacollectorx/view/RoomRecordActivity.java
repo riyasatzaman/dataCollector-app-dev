@@ -4,6 +4,7 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -15,13 +16,13 @@ import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
-import android.util.Log;
 import android.view.MotionEvent;
+import android.view.View;
 import android.widget.Button;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import com.example.datacollectorx.R;
@@ -40,23 +41,34 @@ public class RoomRecordActivity extends BaseActivity implements SensorEventListe
 
     private ProgressBar circularProgressBar;
     private Button buttonHoldToRecord;
+    private Button buttonNext;
+    private Button buttonGoToSearch;
+    private TextView textViewRoomLabel; // Displays the room label
+
+    // Fields for guide mode (sequential room recording)
+    private ArrayList<String> roomsList;
+    private int currentRoomIndex = 0; // default to 0 if not provided
+
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
     private String buildingCode;
     private String room;
+
     private int progressStatus = 0;
     private Handler handler = new Handler();
     private boolean isHolding = false;
     private boolean shouldRecord = false;
-    private boolean isRoomAlreadyScanned = false;
-    private Button buttonGoBack;
+    private List<Map<String, Object>> sensorDataList = new ArrayList<>();
 
     private SensorManager sensorManager;
     private Sensor accelerometer, magnetometer, gyroscope;
     private LocationManager locationManager;
     private WifiManager wifiManager;
 
-    private List<Map<String, Object>> sensorDataList = new ArrayList<>();  // List to hold sensor, location, and Wi-Fi data
+    // Define an interface to get fetched scanned rooms from Firestore
+    public interface NextRoomCallback {
+        void onCallback(List<String> fetchedScannedRooms);
+    }
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
@@ -64,40 +76,42 @@ public class RoomRecordActivity extends BaseActivity implements SensorEventListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_room_record);
 
-        buttonGoBack = findViewById(R.id.buttonGoBack_room_record);
-        buttonGoBack.setOnClickListener(v -> {
-            finish();
-        });
+        // Bind UI elements
+        textViewRoomLabel = findViewById(R.id.textViewRoomLabel);
+        buttonHoldToRecord = findViewById(R.id.buttonHoldToRecord);
+        buttonNext = findViewById(R.id.buttonNext);
+        buttonGoToSearch = findViewById(R.id.buttonGoBack_room_record);
+        circularProgressBar = findViewById(R.id.circularProgressBar);
 
-        // Initialize Firebase instances
+        // Initially, hide the Next button
+        buttonNext.setVisibility(View.GONE);
+
+        // Initialize Firebase, sensor manager, etc.
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
-
-        // Get the room and building code from the intent
-        buildingCode = getIntent().getStringExtra("building_code");
-        room = getIntent().getStringExtra("room");
-
-
-        circularProgressBar = findViewById(R.id.circularProgressBar);
-        buttonHoldToRecord = findViewById(R.id.buttonHoldToRecord);
-
-        // Initialize sensor and location services
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
         wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
-
         initializeSensorsAndLocation();
 
-        // Set the button on long press
+        // Retrieve intent extras (for guide mode, we pass the entire rooms list and current index)
+        buildingCode = getIntent().getStringExtra("building_code");
+        room = getIntent().getStringExtra("room");
+        roomsList = getIntent().getStringArrayListExtra("rooms_list");
+        currentRoomIndex = getIntent().getIntExtra("current_index", 0);
+
+        // Set the initial room label
+        textViewRoomLabel.setText("Recording: " + room);
+
+        // Set up the long press recording action
         buttonHoldToRecord.setOnTouchListener((v, event) -> {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
                     isHolding = true;
                     progressStatus = 0;
-                    sensorDataList.clear();  // Clear the data for new recording
+                    sensorDataList.clear();  // Clear data for a new recording
                     startRecording();
                     return true;
-
                 case MotionEvent.ACTION_UP:
                     isHolding = false;
                     if (progressStatus < 100) {
@@ -106,179 +120,68 @@ public class RoomRecordActivity extends BaseActivity implements SensorEventListe
                         shouldRecord = true;
                         recordSensorData();
                         recordScannedRoom(buildingCode, room);
+                        // Update UI for guide mode
+                        onRecordingComplete();
                     }
                     return true;
             }
             return false;
         });
-    }
 
-    private double calculateEarningsPerRoom(String buildingCode) {
-        double totalEarnings = 0;
-        int totalRooms = 0;
-
-        switch (buildingCode) {
-            case "ATH":  // Athabasca Hall
-                totalEarnings = 20;
-                totalRooms = 248;
-
-                break;
-            case "CSC":  // Computing Science Center
-                totalEarnings = 15;
-                totalRooms = 188;
-                break;
-            case "ASH":  // Assiniobia Hall
-                totalEarnings = 20;
-                totalRooms = 217;
-                break;
-            case "PBH":  // Pembina Hall
-                totalEarnings = 20;
-                totalRooms = 219;
-                break;
-            case "SAB":  // South Academic Building
-                totalEarnings = 30;
-                totalRooms = 544;
-                break;
-            case "SUB":  // Student Union Building
-                totalEarnings = 20;
-                totalRooms = 694;
-                break;
-            case "CAB":  // Central Academic Building
-                totalEarnings = 20;
-                totalRooms = 450;
-                break;
-            case "CCIS":  // CCIS
-                totalEarnings = 40;
-                totalRooms = 1562;
-                break;
-            default:
-                break;
-        }
-        return totalEarnings/totalRooms;
-    }
-
-    private void recordScannedRoom(String buildingCode, String room) {
-        if (shouldRecord) {
-            String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-            DocumentReference userDocRef = db.collection("users").document(userId);
-            DocumentReference adminDocRef = db.collection("admin").document("cQMK4loeC3SVPdaBzKDi");  // Use specific admin document ID
-
-            // Fetch user data from Firestore to update roomsScanned and earnings
-            userDocRef.get().addOnSuccessListener(documentSnapshot -> {
-                if (documentSnapshot.exists()) {
-                    // Get the scannedRooms map and earnings
-                    Map<String, Map<String, Boolean>> scannedRooms = (Map<String, Map<String, Boolean>>) documentSnapshot.get("scannedRooms");
-                    Double currentEarnings = documentSnapshot.getDouble("earnings");
-                    Long roomsScanned = documentSnapshot.getLong("roomsScanned");
-                    Map<String, Boolean> recordedBuildings = (Map<String, Boolean>) documentSnapshot.get("recordedBuildings");
-
-                    // Initialize scannedRooms and recordedBuildings if null
-                    if (scannedRooms == null) {
-                        scannedRooms = new HashMap<>();
+        // Next button: move to the next unscanned room based on Firestore data
+        buttonNext.setOnClickListener(v -> {
+            // Fetch scanned rooms from Firestore (the ones recorded so far)
+            fetchScannedRoomsForRecord(new NextRoomCallback() {
+                @Override
+                public void onCallback(List<String> fetchedScannedRooms) {
+                    boolean foundNext = false;
+                    int nextIndex = currentRoomIndex;
+                    while (nextIndex < roomsList.size() - 1) {
+                        nextIndex++;
+                        String candidateRoom = roomsList.get(nextIndex);
+                        // If this candidate is not in the fetched scanned list, it's unscanned
+                        if (!fetchedScannedRooms.contains(candidateRoom)) {
+                            foundNext = true;
+                            break;
+                        }
                     }
-                    if (recordedBuildings == null) {
-                        recordedBuildings = new HashMap<>();
+                    if (foundNext) {
+                        currentRoomIndex = nextIndex;
+                        room = roomsList.get(currentRoomIndex);
+                        resetUIForNextRoom();
+                    } else {
+                        Toast.makeText(RoomRecordActivity.this, "All unscanned rooms recorded", Toast.LENGTH_SHORT).show();
+                        // Optionally finish or navigate back.
                     }
-
-                    // Check if the building exists in the map
-                    if (!scannedRooms.containsKey(buildingCode)) {
-                        scannedRooms.put(buildingCode, new HashMap<>());
-                    }
-
-                    // Update the specific room as scanned
-                    Map<String, Boolean> buildingRooms = scannedRooms.get(buildingCode);
-                    buildingRooms.put(room, true);
-
-                    // Calculate earnings per room for the building
-                    double earningsPerRoom = calculateEarningsPerRoom(buildingCode);
-
-                    // Update the total earnings and roomsScanned count
-                    double updatedEarnings = (currentEarnings != null ? currentEarnings : 0) + earningsPerRoom;
-                    long updatedRoomsScanned = (roomsScanned != null ? roomsScanned : 0) + 1;
-
-                    // Prepare the updates to send to Firestore
-                    Map<String, Object> updates = new HashMap<>();
-                    updates.put("scannedRooms", scannedRooms);  // Update the scanned rooms
-                    updates.put("earnings", updatedEarnings);  // Update the earnings
-                    updates.put("roomsScanned", updatedRoomsScanned);  // Update the rooms scanned count
-
-                    // Check if it's the user's first time scanning a room in this building
-                    if (!recordedBuildings.containsKey(buildingCode) || !recordedBuildings.get(buildingCode)) {
-                        recordedBuildings.put(buildingCode, true);  // Mark the building as recorded
-                        updates.put("recordedBuildings", recordedBuildings);
-
-                        // Increment the global building count for the first-time recording of this building
-                        adminDocRef.update("buildings." + buildingCode, FieldValue.increment(1));
-                    }
-
-                    // Update the user's Firestore document
-                    userDocRef.update(updates)
-                            .addOnSuccessListener(aVoid -> {
-                                // Now update the global stats in the admin collection
-                                updateGlobalStats(earningsPerRoom);
-                                Toast.makeText(RoomRecordActivity.this, "Room recorded successfully!", Toast.LENGTH_SHORT).show();
-                                goBackTwice();
-                            })
-                            .addOnFailureListener(e -> {
-                                Toast.makeText(RoomRecordActivity.this, "Error recording room: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                            });
                 }
-            }).addOnFailureListener(e -> {
-                Toast.makeText(RoomRecordActivity.this, "Failed to fetch user data: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             });
-        }
+        });
+
+        // "Go to Search" button: return to the search (RoomSelection) screen
+        buttonGoToSearch.setOnClickListener(v -> finish());
     }
 
-    // Function to update global stats in the "admin" collection
-    private void updateGlobalStats(double earningsPerRoom) {
-        DocumentReference adminDocRef = db.collection("admin").document("cQMK4loeC3SVPdaBzKDi");  // Use the specific admin document ID
-
-        // Increment the global earnings and rooms scanned
-        adminDocRef.update("totalMoney", FieldValue.increment(earningsPerRoom));
-        adminDocRef.update("totalRooms", FieldValue.increment(1));
+    // Called when recording is completed successfully
+    private void onRecordingComplete() {
+        textViewRoomLabel.setText("ROOM " + room + " scanned");
+        textViewRoomLabel.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
+        buttonHoldToRecord.setEnabled(false);
+        buttonNext.setVisibility(View.VISIBLE);
     }
 
-
-    private void goBackTwice() {
-        Intent intent = new Intent(RoomRecordActivity.this, BuildingSelectionActivity.class);  // Go back to BuildingSelectionActivity
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-        startActivity(intent);
-        finish();  // Ensure the current activity is finished
+    // Resets UI to record the next room
+    private void resetUIForNextRoom() {
+        progressStatus = 0;
+        circularProgressBar.setProgress(progressStatus);
+        shouldRecord = false;
+        textViewRoomLabel.setText("Recording: " + room);
+        textViewRoomLabel.setTextColor(Color.BLACK);
+        buttonHoldToRecord.setEnabled(true);
+        buttonNext.setVisibility(View.GONE);
+        sensorDataList.clear();
     }
 
-
-
-
-    private void startRecording() {
-        // Reset progress bar
-        circularProgressBar.setProgress(0);
-
-        // Start the countdown for 5 seconds (100 steps of 50ms each)
-        new Thread(() -> {
-            while (isHolding && progressStatus < 100) {
-                progressStatus += 2;  // Increase progress every 50 ms (5 seconds = 100 steps of 50ms)
-                handler.post(() -> circularProgressBar.setProgress(progressStatus));
-
-                // Collect sensor and Wi-Fi data
-                if (progressStatus % 20 == 0) {  // Collect data 5 times during the hold
-                    collectSensorData();
-                    collectWifiData();
-                }
-
-                try {
-                    Thread.sleep(50);  // Wait for 50 milliseconds
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            if (progressStatus == 100) {
-                handler.post(() -> Toast.makeText(RoomRecordActivity.this, "Hold completed!", Toast.LENGTH_SHORT).show());
-            }
-        }).start();
-    }
-
-
+    // Resets recording if the hold is released early
     private void resetRecording() {
         progressStatus = 0;
         circularProgressBar.setProgress(0);
@@ -286,25 +189,40 @@ public class RoomRecordActivity extends BaseActivity implements SensorEventListe
         Toast.makeText(RoomRecordActivity.this, "Hold was released early. Data not recorded.", Toast.LENGTH_SHORT).show();
     }
 
-    // Function to collect sensor data and add it to the list
+    // Starts the 5-second recording process
+    private void startRecording() {
+        circularProgressBar.setProgress(0);
+        new Thread(() -> {
+            while (isHolding && progressStatus < 100) {
+                progressStatus += 2; // 100 steps over 5 seconds (50ms per step)
+                handler.post(() -> circularProgressBar.setProgress(progressStatus));
+                if (progressStatus % 20 == 0) {
+                    collectSensorData();
+                    collectWifiData();
+                }
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (progressStatus >= 100) {
+                handler.post(() -> Toast.makeText(RoomRecordActivity.this, "Hold completed!", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+
+    // Collect sensor data (placeholder logic)
     private void collectSensorData() {
         Map<String, Object> sensorData = new HashMap<>();
-        // Add timestamp and placeholder for sensor values (to be updated in onSensorChanged)
         sensorData.put("timestamp", System.currentTimeMillis());
         sensorDataList.add(sensorData);
     }
 
-    // Function to collect Wi-Fi scan results and add to the list
+    // Collect Wi-Fi data
     private void collectWifiData() {
         if (wifiManager != null) {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
                 return;
             }
             List<ScanResult> scanResults = wifiManager.getScanResults();
@@ -319,48 +237,153 @@ public class RoomRecordActivity extends BaseActivity implements SensorEventListe
         }
     }
 
-    // Function to record sensor and Wi-Fi data to Firestore
+    // Record sensor and Wi-Fi data to Firestore
     private void recordSensorData() {
         if (shouldRecord) {
             String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
             CollectionReference sensorDataCollection = db.collection("sensorData").document(userId).collection("rooms");
-
-            // Prepare data for this specific room
             Map<String, Object> roomData = new HashMap<>();
             roomData.put("building_code", buildingCode);
             roomData.put("room", room);
-            Log.d("RoomRecordActivityxxx", "roomlogdebug: " + room);
-            roomData.put("sensorData", sensorDataList);  // Add the collected sensor and Wi-Fi data
-            roomData.put("timestamp", System.currentTimeMillis());  // Optional: Add timestamp for each record
-
-            // Add a new document for this room
+            roomData.put("sensorData", sensorDataList);
+            roomData.put("timestamp", System.currentTimeMillis());
             sensorDataCollection.add(roomData)
                     .addOnSuccessListener(documentReference -> Toast.makeText(RoomRecordActivity.this, "Sensor data recorded successfully!", Toast.LENGTH_SHORT).show())
                     .addOnFailureListener(e -> Toast.makeText(RoomRecordActivity.this, "Error recording data: " + e.getMessage(), Toast.LENGTH_SHORT).show());
         }
     }
 
+    // Update Firestore with the scanned room and earnings
+    private void recordScannedRoom(String buildingCode, String room) {
+        if (shouldRecord) {
+            String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+            DocumentReference userDocRef = db.collection("users").document(userId);
+            DocumentReference adminDocRef = db.collection("admin").document("cQMK4loeC3SVPdaBzKDi");
 
+            userDocRef.get().addOnSuccessListener(documentSnapshot -> {
+                if (documentSnapshot.exists()) {
+                    Map<String, Map<String, Boolean>> scannedRooms = (Map<String, Map<String, Boolean>>) documentSnapshot.get("scannedRooms");
+                    Double currentEarnings = documentSnapshot.getDouble("earnings");
+                    Long roomsScanned = documentSnapshot.getLong("roomsScanned");
+                    Map<String, Boolean> recordedBuildings = (Map<String, Boolean>) documentSnapshot.get("recordedBuildings");
+
+                    if (scannedRooms == null) {
+                        scannedRooms = new HashMap<>();
+                    }
+                    if (recordedBuildings == null) {
+                        recordedBuildings = new HashMap<>();
+                    }
+                    if (!scannedRooms.containsKey(buildingCode)) {
+                        scannedRooms.put(buildingCode, new HashMap<>());
+                    }
+                    Map<String, Boolean> buildingRooms = scannedRooms.get(buildingCode);
+                    buildingRooms.put(room, true);
+
+                    double earningsPerRoom = calculateEarningsPerRoom(buildingCode);
+                    double updatedEarnings = (currentEarnings != null ? currentEarnings : 0) + earningsPerRoom;
+                    long updatedRoomsScanned = (roomsScanned != null ? roomsScanned : 0) + 1;
+
+                    Map<String, Object> updates = new HashMap<>();
+                    updates.put("scannedRooms", scannedRooms);
+                    updates.put("earnings", updatedEarnings);
+                    updates.put("roomsScanned", updatedRoomsScanned);
+
+                    if (!recordedBuildings.containsKey(buildingCode) || !recordedBuildings.get(buildingCode)) {
+                        recordedBuildings.put(buildingCode, true);
+                        updates.put("recordedBuildings", recordedBuildings);
+                        adminDocRef.update("buildings." + buildingCode, FieldValue.increment(1));
+                    }
+
+                    userDocRef.update(updates)
+                            .addOnSuccessListener(aVoid -> updateGlobalStats(earningsPerRoom))
+                            .addOnFailureListener(e -> Toast.makeText(RoomRecordActivity.this, "Error recording room: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                }
+            }).addOnFailureListener(e -> Toast.makeText(RoomRecordActivity.this, "Failed to fetch user data: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+        }
+    }
+
+    // Update global stats in Firestore
+    private void updateGlobalStats(double earningsPerRoom) {
+        DocumentReference adminDocRef = db.collection("admin").document("cQMK4loeC3SVPdaBzKDi");
+        adminDocRef.update("totalMoney", FieldValue.increment(earningsPerRoom));
+        adminDocRef.update("totalRooms", FieldValue.increment(1));
+    }
+
+    // Calculate earnings per room based on building code
+    private double calculateEarningsPerRoom(String buildingCode) {
+        double totalEarnings = 0;
+        int totalRooms = 0;
+        switch (buildingCode) {
+            case "ATH":
+                totalEarnings = 20;
+                totalRooms = 248;
+                break;
+            case "CSC":
+                totalEarnings = 15;
+                totalRooms = 188;
+                break;
+            case "ASH":
+                totalEarnings = 20;
+                totalRooms = 217;
+                break;
+            case "PBH":
+                totalEarnings = 20;
+                totalRooms = 219;
+                break;
+            case "SAB":
+                totalEarnings = 30;
+                totalRooms = 544;
+                break;
+            case "SUB":
+                totalEarnings = 20;
+                totalRooms = 694;
+                break;
+            case "CAB":
+                totalEarnings = 20;
+                totalRooms = 450;
+                break;
+            case "CCIS":
+                totalEarnings = 40;
+                totalRooms = 1562;
+                break;
+            default:
+                break;
+        }
+        return totalRooms > 0 ? totalEarnings / totalRooms : 0;
+    }
+
+    // Fetch scanned rooms from Firestore for this building for use in guide mode next button.
+    private void fetchScannedRoomsForRecord(NextRoomCallback callback) {
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        DocumentReference userDocRef = db.collection("users").document(userId);
+        userDocRef.get().addOnSuccessListener(documentSnapshot -> {
+            List<String> fetchedScannedRooms = new ArrayList<>();
+            if (documentSnapshot.exists()) {
+                Map<String, Boolean> scannedRoomsMap = (Map<String, Boolean>) documentSnapshot.get("scannedRooms." + buildingCode);
+                if (scannedRoomsMap != null) {
+                    fetchedScannedRooms = new ArrayList<>(scannedRoomsMap.keySet());
+                }
+            }
+            callback.onCallback(fetchedScannedRooms);
+        }).addOnFailureListener(e -> {
+            callback.onCallback(new ArrayList<>());
+        });
+    }
 
     private void initializeSensorsAndLocation() {
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
-
-        // Register sensor listeners
         sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
         sensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_NORMAL);
         sensorManager.registerListener(this, gyroscope, SensorManager.SENSOR_DELAY_NORMAL);
-
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, this);
         }
     }
 
-    // Override sensor and location event listeners
     @Override
     public void onSensorChanged(SensorEvent event) {
-        // Add sensor data collection logic here (X, Y, Z values for accelerometer, magnetometer, gyroscope)
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             Map<String, Object> accelerometerData = new HashMap<>();
             accelerometerData.put("Accelerometer_X", event.values[0]);
@@ -393,15 +416,11 @@ public class RoomRecordActivity extends BaseActivity implements SensorEventListe
     }
 
     @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-        // Implement if needed
-    }
+    public void onAccuracyChanged(Sensor sensor, int accuracy) { }
 
     @Override
-    public void onProviderEnabled(String provider) {
-    }
+    public void onProviderEnabled(String provider) { }
 
     @Override
-    public void onProviderDisabled(String provider) {
-    }
+    public void onProviderDisabled(String provider) { }
 }

@@ -83,6 +83,13 @@ public class RoomAdapter extends RecyclerView.Adapter<RoomAdapter.RoomViewHolder
         };
     }
 
+    // New method to update the scanned rooms list and refresh the adapter
+    public void updateScannedRooms(List<String> newScannedRooms) {
+        scannedRooms.clear();
+        scannedRooms.addAll(newScannedRooms);
+        notifyDataSetChanged();
+    }
+
     public class RoomViewHolder extends RecyclerView.ViewHolder {
         private TextView textViewRoom;
 
@@ -103,11 +110,11 @@ public class RoomAdapter extends RecyclerView.Adapter<RoomAdapter.RoomViewHolder
             if (isScanned) {
                 // Set background color to green if the room has been scanned
                 textViewRoom.setBackgroundColor(Color.parseColor("#4CAF50"));
-                textViewRoom.setTextColor(Color.WHITE);  // Set text color to white for better visibility
+                textViewRoom.setTextColor(Color.WHITE);  // White text for better visibility
             } else {
                 // Set background color to default
                 textViewRoom.setBackgroundColor(Color.WHITE);
-                textViewRoom.setTextColor(Color.BLACK);  // Set text color to black
+                textViewRoom.setTextColor(Color.BLACK);
             }
         }
     }

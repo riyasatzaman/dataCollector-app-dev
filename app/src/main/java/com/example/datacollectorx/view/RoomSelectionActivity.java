@@ -9,7 +9,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -33,12 +32,16 @@ public class RoomSelectionActivity extends BaseActivity {
     private RecyclerView recyclerView;
     private RoomAdapter roomAdapter;
     private EditText searchEditText;
-    private List<String> roomList;  // List of all rooms in the building
-    private List<String> scannedRooms = new ArrayList<>();  // List of scanned rooms for the building
+    private List<String> roomList;       // Full list of rooms for the building
+    private List<String> scannedRooms = new ArrayList<>();  // Scanned rooms for the building
 
     private FirebaseFirestore db;
-    private FirebaseAuth mAuth;
     private String buildingCode;
+
+    // Simple callback interface to know when fetching is complete
+    public interface OnFetchCompleteListener {
+        void onComplete();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,74 +49,83 @@ public class RoomSelectionActivity extends BaseActivity {
         setContentView(R.layout.activity_room_selection);
 
         db = FirebaseFirestore.getInstance();
-        mAuth = FirebaseAuth.getInstance();
 
         Button buttonBack = findViewById(R.id.buttonBack);
+        // When back is clicked, update the list before finishing.
         buttonBack.setOnClickListener(v -> {
-            finish();
+            fetchScannedRoomsForBuilding(buildingCode, new OnFetchCompleteListener() {
+                @Override
+                public void onComplete() {
+                    // Once data is updated, finish the activity.
+                    finish();
+                }
+            });
         });
 
         recyclerView = findViewById(R.id.recyclerViewRooms);
         searchEditText = findViewById(R.id.searchEditText);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        buildingCode = getIntent().getStringExtra("building_code");  // Get the building code
+        // Get the building code passed from the previous activity
+        buildingCode = getIntent().getStringExtra("building_code");
 
-        roomList = getRoomsForBuilding(buildingCode);  // Parse and load room data from JSON
+        // Load the full list of rooms from JSON based on the building code
+        roomList = getRoomsForBuilding(buildingCode);
 
-        // Fetch the user's scanned rooms from Firestore for this building
-        fetchScannedRoomsForBuilding(buildingCode);
+        // Initial fetch of scanned rooms from Firestore (without callback)
+        fetchScannedRoomsForBuilding(buildingCode, null);
 
-        // Add the search functionality
+        // Add search functionality to filter the room list
         searchEditText.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {  }
 
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                roomAdapter.getFilter().filter(charSequence);  // Call the filter method in the adapter
+                if (roomAdapter != null) {
+                    roomAdapter.getFilter().filter(charSequence);
+                }
             }
 
             @Override
-            public void afterTextChanged(Editable editable) {}
+            public void afterTextChanged(Editable editable) {  }
         });
     }
 
+    // Sets up the adapter (or creates it) with the provided scanned rooms list.
     private void setupRecyclerView(List<String> scannedRooms) {
-        // Initialize the adapter with the room list and the scanned rooms
         roomAdapter = new RoomAdapter(roomList, scannedRooms, new RoomAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(String room) {
                 if (!scannedRooms.contains(room)) {
-                    // Redirect to OCR activity only if the room has not been scanned
+                    // Launch RoomRecordActivity in guide mode:
                     Intent intent = new Intent(RoomSelectionActivity.this, RoomRecordActivity.class);
-                    intent.putExtra("building_code", buildingCode);  // Pass the building code
-                    intent.putExtra("room", room);  // Pass the room name
+                    intent.putExtra("building_code", buildingCode);
+                    intent.putExtra("room", room);
+                    intent.putStringArrayListExtra("rooms_list", new ArrayList<>(roomList));
+                    intent.putExtra("current_index", roomList.indexOf(room));
                     startActivity(intent);
-
                 } else {
-                    // If the room is already scanned, notify the user
                     Toast.makeText(RoomSelectionActivity.this, "Room already scanned: " + room, Toast.LENGTH_LONG).show();
                 }
             }
         });
-
-        // Set up the RecyclerView with the adapter
         recyclerView.setAdapter(roomAdapter);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        // Fetch the scanned rooms again when returning to the activity
-        fetchScannedRoomsForBuilding(buildingCode);
+        // Clear any active search filter
+        searchEditText.setText("");
+        // Refresh scanned rooms data
+        fetchScannedRoomsForBuilding(buildingCode, null);
     }
 
-    // Load rooms from the JSON file based on the building code
+    // Loads room list from a JSON file based on the building code.
     private List<String> getRoomsForBuilding(String buildingCode) {
         List<String> rooms = new ArrayList<>();
         try {
-            // Open the JSON file from assets
             InputStream is = getAssets().open("rooms.json");
             int size = is.available();
             byte[] buffer = new byte[size];
@@ -121,50 +133,47 @@ public class RoomSelectionActivity extends BaseActivity {
             is.close();
 
             String json = new String(buffer, "UTF-8");
-
-            // Parse JSON using Gson
             Gson gson = new Gson();
             Type type = new TypeToken<Map<String, List<String>>>() {}.getType();
             Map<String, List<String>> buildingData = gson.fromJson(json, type);
 
-            // Check if the building code exists in the JSON and retrieve the corresponding rooms
             if (buildingData.containsKey(buildingCode)) {
                 rooms = buildingData.get(buildingCode);
             }
-
         } catch (IOException ex) {
             ex.printStackTrace();
         }
-
-        return rooms;  // Return the list of rooms for the selected building
+        return rooms;
     }
 
-    // Fetch scanned rooms from Firestore for the selected building
-    private void fetchScannedRoomsForBuilding(String buildingCode) {
+    // Fetches scanned rooms from Firestore for the given building.
+    // If a callback is provided, it calls it after updating the adapter.
+    private void fetchScannedRoomsForBuilding(String buildingCode, OnFetchCompleteListener listener) {
         String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
-
         DocumentReference userDocRef = db.collection("users").document(userId);
 
         userDocRef.get().addOnSuccessListener(documentSnapshot -> {
+            List<String> updatedScannedRooms = new ArrayList<>();
             if (documentSnapshot.exists()) {
-                // Fetch scanned rooms as a Map
                 Map<String, Boolean> scannedRoomsMap = (Map<String, Boolean>) documentSnapshot.get("scannedRooms." + buildingCode);
-
                 if (scannedRoomsMap != null) {
-                    // Convert map keys (room names) into a List of scanned rooms
-                    List<String> scannedRooms = new ArrayList<>(scannedRoomsMap.keySet());
-
-                    // Now, pass this scannedRooms list to your adapter or any other logic
-                    setupRecyclerView(scannedRooms);
-                } else {
-                    // If there are no scanned rooms for this building
-                    setupRecyclerView(new ArrayList<>()); // Pass an empty list
+                    updatedScannedRooms = new ArrayList<>(scannedRoomsMap.keySet());
                 }
+                Log.d("RoomSelectionActivity", "Fetched scanned rooms: " + updatedScannedRooms.toString());
+            }
+            if (roomAdapter == null) {
+                setupRecyclerView(updatedScannedRooms);
+            } else {
+                roomAdapter.updateScannedRooms(updatedScannedRooms);
+            }
+            if (listener != null) {
+                listener.onComplete();
             }
         }).addOnFailureListener(e -> {
             Toast.makeText(RoomSelectionActivity.this, "Error fetching scanned rooms: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            if (listener != null) {
+                listener.onComplete();
+            }
         });
     }
-
 }
