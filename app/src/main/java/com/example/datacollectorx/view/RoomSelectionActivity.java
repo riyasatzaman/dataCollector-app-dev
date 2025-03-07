@@ -86,7 +86,7 @@ public class RoomSelectionActivity extends BaseActivity {
             public void onItemClick(String room) {
                 if (!scannedRooms.contains(room)) {
                     // Redirect to OCR activity only if the room has not been scanned
-                    Intent intent = new Intent(RoomSelectionActivity.this, RoomOCRActivity.class);
+                    Intent intent = new Intent(RoomSelectionActivity.this, RoomRecordActivity.class);
                     intent.putExtra("building_code", buildingCode);  // Pass the building code
                     intent.putExtra("room", room);  // Pass the room name
                     startActivity(intent);

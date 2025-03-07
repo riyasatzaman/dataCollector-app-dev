@@ -15,6 +15,7 @@ import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.widget.Button;
 import android.widget.ProgressBar;
@@ -25,6 +26,7 @@ import androidx.core.app.ActivityCompat;
 
 import com.example.datacollectorx.R;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -74,6 +76,7 @@ public class RoomRecordActivity extends BaseActivity implements SensorEventListe
         // Get the room and building code from the intent
         buildingCode = getIntent().getStringExtra("building_code");
         room = getIntent().getStringExtra("room");
+
 
         circularProgressBar = findViewById(R.id.circularProgressBar);
         buttonHoldToRecord = findViewById(R.id.buttonHoldToRecord);
@@ -320,19 +323,24 @@ public class RoomRecordActivity extends BaseActivity implements SensorEventListe
     private void recordSensorData() {
         if (shouldRecord) {
             String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-            DocumentReference userDocRef = db.collection("sensorData").document(userId);
+            CollectionReference sensorDataCollection = db.collection("sensorData").document(userId).collection("rooms");
 
-            // Upload sensor data to Firestore
-            Map<String, Object> data = new HashMap<>();
-            data.put("building_code", buildingCode);
-            data.put("room", room);
-            data.put("sensorData", sensorDataList);  // Add the collected sensor and Wi-Fi data
+            // Prepare data for this specific room
+            Map<String, Object> roomData = new HashMap<>();
+            roomData.put("building_code", buildingCode);
+            roomData.put("room", room);
+            Log.d("RoomRecordActivityxxx", "roomlogdebug: " + room);
+            roomData.put("sensorData", sensorDataList);  // Add the collected sensor and Wi-Fi data
+            roomData.put("timestamp", System.currentTimeMillis());  // Optional: Add timestamp for each record
 
-            userDocRef.set(data)
-                    .addOnSuccessListener(aVoid -> Toast.makeText(RoomRecordActivity.this, "Sensor data recorded successfully!", Toast.LENGTH_SHORT).show())
+            // Add a new document for this room
+            sensorDataCollection.add(roomData)
+                    .addOnSuccessListener(documentReference -> Toast.makeText(RoomRecordActivity.this, "Sensor data recorded successfully!", Toast.LENGTH_SHORT).show())
                     .addOnFailureListener(e -> Toast.makeText(RoomRecordActivity.this, "Error recording data: " + e.getMessage(), Toast.LENGTH_SHORT).show());
         }
     }
+
+
 
     private void initializeSensorsAndLocation() {
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
