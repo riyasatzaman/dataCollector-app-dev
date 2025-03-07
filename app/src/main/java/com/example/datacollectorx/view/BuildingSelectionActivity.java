@@ -196,45 +196,32 @@ public class BuildingSelectionActivity extends BaseActivity {
 
         // Bind UI elements
         buttonBack = findViewById(R.id.buttonGoBack_building_selection);
-        buttonBack.setOnClickListener(v -> {
-            finish();
-        });
+        buttonBack.setOnClickListener(v -> finish());
         recyclerView = findViewById(R.id.recyclerViewBuildings);
-        recyclerView.setLayoutManager(new GridLayoutManager(this, 2)); // 2 columns
 
-        // Initialize building images (use your drawable resource IDs)
+        // Set a GridLayoutManager with 2 columns.
+        // Using a SpanSizeLookup so that if there's only one item it spans both columns (centering it).
+        GridLayoutManager gridLayoutManager = new GridLayoutManager(this, 2);
+        gridLayoutManager.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
+            @Override
+            public int getSpanSize(int position) {
+                // With one item, force it to span both columns.
+                return 2;
+            }
+        });
+        recyclerView.setLayoutManager(gridLayoutManager);
+
+        // Initialize building arrays with only the CSC building
         buildingImages = new ArrayList<>();
-        buildingImages.add(R.drawable.athabasca);   // ATH
-        buildingImages.add(R.drawable.assinioba);   // ASB
-        buildingImages.add(R.drawable.cab);         // CAB
-        buildingImages.add(R.drawable.sab);         // SAB
-        buildingImages.add(R.drawable.pembina);     // PEMB
-        buildingImages.add(R.drawable.csc);         // CSC
-        buildingImages.add(R.drawable.sub);         // SUB
-        buildingImages.add(R.drawable.ccis);        // CCIS
+        buildingImages.add(R.drawable.csc); // Only CSC image
 
-        // Initialize building labels
         buildingLabels = new ArrayList<>();
-        buildingLabels.add("Athabasca Hall (ATH)");
-        buildingLabels.add("Assiniobia Hall (ASH)");
-        buildingLabels.add("Central Academic Building (CAB)");
-        buildingLabels.add("South Academic Building (SAB)");
-        buildingLabels.add("Pembina Hall (PBH)");
         buildingLabels.add("Computing Science Center (CSC)");
-        buildingLabels.add("Student Union Building (SUB)");
-        buildingLabels.add("CCIS");
 
-        // Initialize building codes
         buildingCodes = new ArrayList<>();
-        buildingCodes.add("ATH");
-        buildingCodes.add("ASH");
-        buildingCodes.add("CAB");
-        buildingCodes.add("SAB");
-        buildingCodes.add("PBH");
         buildingCodes.add("CSC");
-        buildingCodes.add("SUB");
-        buildingCodes.add("CCIS");
     }
+
 
     // Show a modal or toast when building limit is reached
     private void showBuildingLimitReached(String buildingLabel) {
