@@ -319,8 +319,8 @@ public class RoomRecordActivity extends BaseActivity implements SensorEventListe
                 totalRooms = 248;
                 break;
             case "CSC":
-                totalEarnings = 15;
-                totalRooms = 188;
+                totalEarnings = 150;
+                totalRooms = 1128;
                 break;
             case "ASH":
                 totalEarnings = 20;

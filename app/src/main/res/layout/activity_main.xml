@@ -49,6 +49,13 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Begin Scanning and Earn Money" />
+
+        <Button
+            android:id="@+id/customLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Record Custom Label"
+            android:layout_marginTop="18dp"/>
     </LinearLayout>
 
     <!-- FrameLayout for Fragment -->

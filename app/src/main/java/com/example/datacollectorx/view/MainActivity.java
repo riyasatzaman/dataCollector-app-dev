@@ -1,11 +1,13 @@
 package com.example.datacollectorx.view;
 
 import android.Manifest;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -34,6 +36,7 @@ public class MainActivity extends BaseActivity {
     private Button buttonShowStats;
     private Button buttonTestSensors;
     private Button buttonBeginScanning;
+    private Button buttonCustomLabel;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -50,6 +53,7 @@ public class MainActivity extends BaseActivity {
         buttonShowStats = findViewById(R.id.stats);
         buttonTestSensors = findViewById(R.id.buttonTestSensors);
         buttonBeginScanning = findViewById(R.id.buttonBeginScanning);
+        buttonCustomLabel  = findViewById(R.id.customLabel);
 
         // Get the current user
         FirebaseUser currentUser = mAuth.getCurrentUser();
@@ -100,6 +104,49 @@ public class MainActivity extends BaseActivity {
                 showWithdrawConfirmationDialog();
             }
         });
+
+        buttonCustomLabel.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Create an AlertDialog to get the custom label input
+                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                builder.setTitle("Enter Custom Label");
+
+                // Set up the input field
+                final EditText input = new EditText(MainActivity.this);
+                input.setHint("Custom label");
+                builder.setView(input);
+
+                // Set up the Record button
+                builder.setPositiveButton("Record", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        String customLabel = input.getText().toString().trim();
+                        if (!customLabel.isEmpty()) {
+                            // Launch the recording activity and pass the custom label
+                            Intent intent = new Intent(MainActivity.this, RoomRecordActivity.class);
+                            intent.putExtra("room", customLabel);
+                            intent.putExtra("isCustomLabel", true);
+                            startActivity(intent);
+                        } else {
+                            Toast.makeText(MainActivity.this, "Label cannot be empty", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+
+                // Set up the Cancel button
+                builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.cancel();
+                    }
+                });
+
+                // Show the dialog
+                builder.show();
+            }
+        });
+
 
         // Set up the profile view button
         buttonShowStats.setOnClickListener(new View.OnClickListener() {
