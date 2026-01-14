@@ -6,10 +6,8 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.datacollectorx.R;
@@ -22,11 +20,13 @@ public class BuildingAdapter extends RecyclerView.Adapter<BuildingAdapter.ViewHo
     private List<Integer> buildingImages;
     private List<String> buildingLabels;
     private List<String> buildingCodes;
-    private Map<String, List<String>> roomDataMap;  // Rooms loaded from JSON
-    private Map<String, Map<String, Boolean>> scannedRoomsMap;  // Scanned rooms from Firestore
-    private Map<String, Long> buildingsMap;  // Map from admin collection (building -> user count)
+    private Map<String, List<String>> roomDataMap;
+    private Map<String, Map<String, Boolean>> scannedRoomsMap;
+    private Map<String, Long> buildingsMap;
     private OnItemClickListener listener;
-    private static final int MAX_USERS_PER_BUILDING = 10;  // Maximum number of users per building
+
+    // Constants for CAB Grid (calculated from 120ft x 190ft at 3m squares)
+    private static final int CAB_TOTAL_SQUARES = 260; 
 
     public interface OnItemClickListener {
         void onItemClick(int position);
@@ -40,7 +40,7 @@ public class BuildingAdapter extends RecyclerView.Adapter<BuildingAdapter.ViewHo
         this.buildingCodes = buildingCodes;
         this.roomDataMap = roomDataMap;
         this.scannedRoomsMap = scannedRoomsMap;
-        this.buildingsMap = buildingsMap;  // Data from admin (building -> user count)
+        this.buildingsMap = buildingsMap;
         this.listener = listener;
     }
 
@@ -53,64 +53,58 @@ public class BuildingAdapter extends RecyclerView.Adapter<BuildingAdapter.ViewHo
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        // Set building image and label
         holder.imageViewBuilding.setImageResource(buildingImages.get(position));
         holder.textViewBuildingLabel.setText(buildingLabels.get(position));
 
         String buildingCode = buildingCodes.get(position);
 
-        // Calculate total rooms from JSON
-        int totalRooms = getTotalRoomsForBuilding(buildingCode);
+        // Determine Total Squares based on Building
+        int totalTarget;
+        if ("CAB".equals(buildingCode)) {
+            totalTarget = CAB_TOTAL_SQUARES;
+        } else {
+            // Fallback to old room list size for other buildings if they haven't been converted to grid yet
+            List<String> rooms = roomDataMap.get(buildingCode);
+            totalTarget = (rooms != null) ? rooms.size() : 0;
+        }
 
-        // Fetch scanned rooms and calculate progress
-        int scannedRooms = getScannedRoomsForBuilding(buildingCode);
+        // Calculate recorded squares/rooms
+        int recordedCount = 0;
+        if (scannedRoomsMap.containsKey(buildingCode)) {
+            Map<String, Boolean> scanned = scannedRoomsMap.get(buildingCode);
+            recordedCount = (int) scanned.values().stream().filter(v -> v).count();
+        }
 
         // Calculate progress percentage
-        int progress = totalRooms > 0 ? (scannedRooms * 100) / totalRooms : 0;
+        int progress = totalTarget > 0 ? (recordedCount * 100) / totalTarget : 0;
 
-        // Set progress bar and text
         holder.buildingProgressBar.setProgress(progress);
         holder.textViewPercentage.setText(progress + "%");
 
-        // Fetch user count for the building
+        // Handle disabled state for buildings reaching limit
         if (buildingsMap.containsKey(buildingCode)) {
-            Object buildingCountObject = buildingsMap.get(buildingCode);
-
-            // Handle the case where the object is a string and needs to be converted to a Long
-            long buildingCount;
-            if (buildingCountObject instanceof String) {
-                try {
-                    buildingCount = Long.parseLong((String) buildingCountObject);
-                } catch (NumberFormatException e) {
-                    buildingCount = 0; // Handle parsing failure gracefully
-                }
-            } else if (buildingCountObject instanceof Long) {
-                buildingCount = (Long) buildingCountObject;
-            } else {
-                buildingCount = 0; // Default to 0 if type is unexpected
+            Object countObj = buildingsMap.get(buildingCode);
+            long buildingCount = 0;
+            if (countObj instanceof Long) buildingCount = (Long) countObj;
+            else if (countObj instanceof String) {
+                try { buildingCount = Long.parseLong((String) countObj); } catch (Exception e) {}
             }
 
-            // Check if the building limit is reached
             if (buildingCount >= 10) {
-                // Set the view to disabled or gray out the building selection
-
-
-                holder.itemView.setAlpha(0.5f);  // Make the item look disabled visually
+                holder.itemView.setAlpha(0.5f);
+                holder.itemView.setEnabled(false);
             } else {
-                // Set the view to enabled
+                holder.itemView.setAlpha(1.0f);
                 holder.itemView.setEnabled(true);
-                holder.itemView.setAlpha(1.0f);  // Reset opacity
             }
         }
 
-        // Set onClick listener
         holder.itemView.setOnClickListener(v -> {
             if (listener != null && holder.itemView.isEnabled()) {
-                listener.onItemClick(position);  // Pass building index
+                listener.onItemClick(position);
             }
         });
     }
-
 
     @Override
     public int getItemCount() {
@@ -130,20 +124,5 @@ public class BuildingAdapter extends RecyclerView.Adapter<BuildingAdapter.ViewHo
             buildingProgressBar = itemView.findViewById(R.id.buildingProgressBar);
             textViewPercentage = itemView.findViewById(R.id.buildingPercentage);
         }
-    }
-
-    // Get total rooms from JSON data for a specific building
-    private int getTotalRoomsForBuilding(String buildingCode) {
-        List<String> roomsForBuilding = roomDataMap.get(buildingCode);
-        return roomsForBuilding != null ? roomsForBuilding.size() : 0;
-    }
-
-    // Get scanned rooms from Firestore data for a specific building
-    private int getScannedRoomsForBuilding(String buildingCode) {
-        if (scannedRoomsMap.containsKey(buildingCode)) {
-            Map<String, Boolean> buildingScannedRooms = scannedRoomsMap.get(buildingCode);
-            return (int) buildingScannedRooms.values().stream().filter(scanned -> scanned).count();
-        }
-        return 0;
     }
 }

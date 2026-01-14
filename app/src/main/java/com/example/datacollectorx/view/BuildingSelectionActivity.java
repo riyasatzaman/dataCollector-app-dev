@@ -161,8 +161,8 @@ public class BuildingSelectionActivity extends BaseActivity {
                                                 // Show modal or toast message
                                                 showBuildingLimitReached(buildingLabels.get(position));
                                             } else {
-                                                // Pass the building code to RoomSelectionActivity
-                                                Intent intent = new Intent(BuildingSelectionActivity.this, RoomSelectionActivity.class);
+                                                // Pass the building code to FloorSelectionActivity
+                                                Intent intent = new Intent(BuildingSelectionActivity.this, FloorSelectionActivity.class);
                                                 intent.putExtra("building_code", buildingCodes.get(position));
                                                 startActivity(intent);
                                             }
@@ -211,15 +211,15 @@ public class BuildingSelectionActivity extends BaseActivity {
         });
         recyclerView.setLayoutManager(gridLayoutManager);
 
-        // Initialize building arrays with only the CSC building
+        // Initialize building arrays
         buildingImages = new ArrayList<>();
-        buildingImages.add(R.drawable.csc); // Only CSC image
+        buildingImages.add(R.drawable.cab); // CAB image
 
         buildingLabels = new ArrayList<>();
-        buildingLabels.add("Computing Science Center (CSC)");
+        buildingLabels.add("Central Academic Building (CAB)");
 
         buildingCodes = new ArrayList<>();
-        buildingCodes.add("CSC");
+        buildingCodes.add("CAB");
     }
 
 
