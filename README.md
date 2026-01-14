@@ -4,9 +4,10 @@ dataCollectorX is an Android-based framework designed for high-precision indoor 
 
 ## Screenshots
 
+
 <p align="center">
   <img src="https://github.com/user-attachments/assets/3bc897ba-e3ef-4f11-af88-3a25f0200888" width="250" alt="Map Selection" />
-  <img src="https://github.com/user-attachments/assets/a60b529b-96da-4ee4-b01e-4b5795bbd725" width="250" alt="Data Recording" />
+  <img src="https://github.com/user-attachments/assets/94514cea-09df-4789-a956-36f771267e5b" width="250" alt="Data Recording" />
   <img src="https://github.com/user-attachments/assets/6dcbda6e-9f01-46d9-8f68-6008c540b0d1" width="250" alt="Building Selection" />
 </p>
 
