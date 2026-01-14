@@ -46,7 +46,7 @@ Data is exported to Firebase Firestore in the following schema:
 - `wifiData`: Array of detected Wi-Fi access points.
 
 ## Project Origins
-This application was developed at the University of Alberta with incentives to facilitate indoor localization research.
+This application was developed at the University of Alberta for crowd sourcing with incentives to participants to facilitate indoor localization research.
 
 ## Prerequisites
 - Android Studio Flamingo or newer.
