@@ -32,10 +32,8 @@ To ensure the coordinate system matches your physical building, update the const
 - `squareSizeMeters`: The desired size of each grid cell (e.g., 1.5m, 3.0m).
 - `imageWidthPx` and `imageHeightPx`: The pixel dimensions of your PNG file.
 
-### 4. Changing Collection Parameters
-In `RoomRecordActivity.java`, you can modify:
-- **Recording Duration**: The default is 5 seconds. Adjust the `progressStatus` increment logic in `startRecording()` to change the duration.
-- **Data Target**: Currently configured to upload to the `sensorData_new` Firestore collection.
+### 4. UI Customization
+Researchers are free to remove or modify the building and room labels in the XML layouts to suit their specific environment. The framework is designed to be building-agnostic.
 
 ## Data Structure
 
@@ -46,6 +44,9 @@ Data is exported to Firebase Firestore in the following schema:
 - `x_m` / `y_m`: Real-world center coordinates of the square in meters.
 - `sensorData`: Array of inertial sensor readings (accel, mag, gyro, gps).
 - `wifiData`: Array of detected Wi-Fi access points.
+
+## Project Origins
+This application was developed at the University of Alberta with incentives to facilitate indoor localization research.
 
 ## Prerequisites
 - Android Studio Flamingo or newer.
