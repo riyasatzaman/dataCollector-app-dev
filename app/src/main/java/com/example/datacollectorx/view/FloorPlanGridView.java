@@ -33,8 +33,8 @@ public class FloorPlanGridView extends View {
     // Map Metadata (Defaults, will be updated by bitmap size)
     private float imageWidthPx = 1102f;
     private float imageHeightPx = 1716f;
-    private float widthFeet = 120f;
-    private float heightFeet = 190f;
+    private float widthFeet = 354f;
+    private float heightFeet = 106f;
     private float squareSizeMeters = 3.0f;
     private float ftToM = 0.3048f;
 
