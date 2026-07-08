@@ -213,13 +213,13 @@ public class BuildingSelectionActivity extends BaseActivity {
 
         // Initialize building arrays
         buildingImages = new ArrayList<>();
-        buildingImages.add(R.drawable.cab); // CAB image
+        buildingImages.add(R.drawable.ucommons); // Ucommons image
 
         buildingLabels = new ArrayList<>();
-        buildingLabels.add("Central Academic Building (CAB)");
+        buildingLabels.add("University Commons - Floor 7");
 
         buildingCodes = new ArrayList<>();
-        buildingCodes.add("CAB");
+        buildingCodes.add("UCOMMONS");
     }
 
 
