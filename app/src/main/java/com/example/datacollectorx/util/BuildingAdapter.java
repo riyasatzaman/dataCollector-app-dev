@@ -26,7 +26,8 @@ public class BuildingAdapter extends RecyclerView.Adapter<BuildingAdapter.ViewHo
     private OnItemClickListener listener;
 
     // Constants for CAB Grid (calculated from 120ft x 190ft at 3m squares)
-    private static final int CAB_TOTAL_SQUARES = 260; 
+    private static final int CAB_TOTAL_SQUARES = 260;
+    private static final int UCOMMONS_TOTAL_SQUARES = 396; // 354ft x 106ft at 3m squares (36 x 11).
 
     public interface OnItemClickListener {
         void onItemClick(int position);
@@ -62,11 +63,14 @@ public class BuildingAdapter extends RecyclerView.Adapter<BuildingAdapter.ViewHo
         int totalTarget;
         if ("CAB".equals(buildingCode)) {
             totalTarget = CAB_TOTAL_SQUARES;
+        } else if ("UCOMMONS".equals(buildingCode)) {
+            totalTarget = UCOMMONS_TOTAL_SQUARES;
         } else {
             // Fallback to old room list size for other buildings if they haven't been converted to grid yet
             List<String> rooms = roomDataMap.get(buildingCode);
             totalTarget = (rooms != null) ? rooms.size() : 0;
         }
+
 
         // Calculate recorded squares/rooms
         int recordedCount = 0;

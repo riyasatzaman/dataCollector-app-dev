@@ -117,6 +117,7 @@
             android:text="Withdraw"
             android:textColor="@android:color/black"
             android:background="?attr/selectableItemBackground"
-            android:padding="16dp" />
+            android:padding="16dp"
+            android:visibility="gone" />
     </LinearLayout>
 </RelativeLayout>

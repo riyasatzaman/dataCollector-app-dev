@@ -5,6 +5,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import java.util.Map;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -50,7 +51,16 @@ public class UserStatsFragment extends Fragment {
                     .get()
                     .addOnSuccessListener(documentSnapshot -> {
                         if (documentSnapshot.exists()) {
-                            Long roomsScanned = documentSnapshot.getLong("roomsScanned");
+                            // Count scanned squares from the scannedRooms map
+                            int roomsScanned = 0;
+                            Object scannedObj = documentSnapshot.get("scannedRooms");
+                            if (scannedObj instanceof Map) {
+                                for (Object building : ((Map<?, ?>) scannedObj).values()) {
+                                    if (building instanceof Map) {
+                                        roomsScanned += ((Map<?, ?>) building).size();
+                                    }
+                                }
+                            }
                             Double earnings = documentSnapshot.getDouble("earnings");
 
                             textViewRoomsScanned.setText("Rooms Scanned: " + roomsScanned);
